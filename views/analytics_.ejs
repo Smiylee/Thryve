@@ -1,0 +1,15 @@
+<h1>Analytics</h1>
+
+<p>Welcome to the analytics dashboard. Here you can find various metrics and insights about your data.</p>
+
+
+
+<% if(mostCommonSicknesses) { %>
+     <h2>Top 5 most common Sicknesses</h2>
+     <ul>
+        <% mostCommonSicknesses.forEach( sickness => { %>
+            <li><%= sickness.name %> - <%= sickness.complaintCount %> cases</li>
+      <% }) %>
+     
+     </ul>
+    <% } %>

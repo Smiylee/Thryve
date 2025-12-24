@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id          Int       @id @default(autoincrement())
+  username    String
+  password    String
+  adminCode   String?    
+  nurses      Nurse[]
+  createdAt   DateTime  @default(now())
+}
+
+model Nurse {
+  id          Int        @id @default(autoincrement())
+  name        String
+  email       String     @unique
+  phone       String?  
+  password    String
+  adminId     Int
+  admin       Admin      @relation(fields: [adminId], references: [id])
+  shifts      Shift[]
+  complaints  Complaint[]
+  createdAt   DateTime   @default(now())
+}
+
+model Shift {
+  id          Int        @id @default(autoincrement())
+  nurseId     Int
+  nurse       Nurse      @relation(fields: [nurseId], references: [id])
+  nurseName   String?      
+  startTime   DateTime
+  endTime     DateTime?
+  createdAt   DateTime   @default(now())
+}
+
+model Student {
+  id             Int          @id @default(autoincrement())
+  name           String
+  class          String
+  age            Int
+  height         Float?
+  weight         Float?
+  lastTetanus    DateTime?
+  lastAntiMalaria DateTime?
+  complaints     Complaint[]
+  reminder        Reminder[]
+  createdAt      DateTime     @default(now())
+}
+
+model Complaint {
+  id          Int        @id @default(autoincrement())
+  complaintIdent String
+  sicknesses  Sickness[]  @relation("ComplaintSicknesses")
+  medication  String?      @default("None")
+  complaintNotes String
+  severity     String
+  frequency    Int
+  duration     Int
+  started      DateTime    @default(now())
+  ended        DateTime?
+  studentId   Int
+  nurseId     Int
+  studentName String?    
+  nurseName   String?
+  student     Student    @relation(fields: [studentId], references: [id])
+  nurse       Nurse      @relation(fields: [nurseId], references: [id])
+  createdAt   DateTime   @default(now())
+}
+
+
+model Reminder {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  date        DateTime
+  studentId   Int?
+  student     Student?  @relation(fields: [studentId], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+
+model Sickness {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  complaints Complaint[] @relation("ComplaintSicknesses")
+}

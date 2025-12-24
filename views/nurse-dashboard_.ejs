@@ -1,0 +1,29 @@
+<style>
+    #logout-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        background-color: #334155;
+        color: #fff;
+        font-size: 15px;
+        cursor: pointer;
+        transition: 0.25s;
+    }
+</style>
+<body>
+    
+ <!-- <h1>Nonso</h1> -->
+ <h2>Welcome, <%= user.name %></h2>
+    <p>Your ID is: <%= user.id %></p>
+    <%= error  %>
+
+    <form method="post" action="/auth/logout/nurse">
+        <input type="hidden" name="userId" value="<%= user.id %>">
+        <button type="submit" id="logout-button">Logout</button>
+    </form>
+    
+</body>
+</html>

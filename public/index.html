@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Thryve - Login</title>
+<style>
+:root{
+    --bg1: #f7f7fb;
+    --bg2: #eef2ff;
+    /* --accent-admin: linear-gradient(135deg,#7c4dff,#4fc3f7); */
+    --accent-admin: linear-gradient(135deg,#7c4dff,#4fc3f7);
+
+    --accent-nurse: linear-gradient(135deg,#ff7ab6,#ffb86b);
+    --text: #111827;
+    --glass: rgba(255,255,255,0.6);
+    --shadow: 0 8px 24px rgba(16,24,40,0.08);
+    --shadow-hover: 0 18px 40px rgba(16,24,40,0.12);
+    --radius: 10px;
+}
+
+html,body{
+    height:100%;
+    margin:0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color:var(--text);
+    background: linear-gradient(-45deg,#eef2ff,#f7f7fb,#dfe7f5,#f5f7fb);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+@keyframes gradientBG {
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+}
+
+.wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:32px;
+    padding:40px 20px;
+}
+
+h1{
+    margin:0 0 18px 0;
+    font-weight:700;
+    letter-spacing:-0.4px;
+    text-align:center;
+    font-size:clamp(20px,3.5vw,32px);
+    color:#222;
+    animation: fadeInDown 1s ease forwards;
+}
+
+@keyframes fadeInDown {
+    from { opacity:0; transform:translateY(-15px);}
+    to { opacity:1; transform:translateY(0);}
+}
+
+.card{
+    background: rgba(255,255,255,0.6);
+    border-radius:16px;
+    padding:36px 40px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px) saturate(120%);
+    display:flex;
+    gap:24px;
+    flex-direction:column;
+    align-items:center;
+    min-width:280px;
+    animation: floatCard 3s ease-in-out infinite alternate;
+}
+
+@keyframes floatCard {
+    0%{transform: translateY(0);}
+    100%{transform: translateY(-8px);}
+}
+
+.btn-row{
+    display:flex;
+    flex-direction: column; /* stack vertically */
+    gap:16px; /* spacing between buttons */
+    width:100%;
+    justify-content:center;
+    align-items:center; /* center horizontally */
+}
+
+.btn{
+    position:relative;
+    overflow:hidden;
+    appearance:none;
+    -webkit-appearance:none;
+    border:0;
+    cursor:pointer;
+    color:white;
+    font-weight:600;
+    padding:14px 24px;
+    min-width:180px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    border-radius:var(--radius);
+    box-shadow: var(--shadow);
+    /* transition: transform .25s ease, box-shadow .25s ease, filter .25s ease; */
+    text-decoration:none;
+    font-size:16px;
+    line-height:1;
+}
+
+.btn svg{
+    width:20px;
+    height:20px;
+    flex-shrink:0;
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.06));
+}
+
+.btn:hover{
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: var(--shadow-hover);
+}
+
+.btn::after{
+    content:"";
+    position:absolute;
+    pointer-events:none;
+    inset:0;
+    border-radius:inherit;
+    background: linear-gradient(120deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02));
+    mix-blend-mode: overlay;
+    opacity:0;
+    transition:opacity 0.4s ease;
+}
+
+.btn:hover::after{
+    opacity:1;
+    animation: sheen 1.2s ease infinite;
+}
+
+@keyframes sheen{
+    0%{transform: translateX(-100%) rotate(25deg);}
+    50%{transform: translateX(100%) rotate(25deg);}
+    100%{transform: translateX(-100%) rotate(25deg);}
+}
+
+.admin{
+    background-image: var(--accent-admin);
+    background-size:200% 200%;
+    animation: gradientShift 4s ease infinite alternate;
+}
+
+.nurse{
+    background-image: var(--accent-nurse);
+    background-size:200% 200%;
+    animation: gradientShift 4s ease infinite alternate-reverse;
+}
+
+@keyframes gradientShift{
+    0%{background-position:0% 50%;}
+    100%{background-position:100% 50%;}
+}
+
+@media (max-width:420px){
+    .btn{ min-width:140px; padding:12px 14px; font-size:15px; }
+    .card{ padding:24px; gap:14px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Welcome to Thryve</h1>
+
+  <div class="card" role="region" aria-label="Login options">
+    <div class="btn-row">
+        <button class="btn admin" onclick="location.href='/auth/login/admin'" aria-label="Login as Admin">
+            <!-- Shield icon -->
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2l7 3v5c0 5-3.6 9.8-7 12-3.4-2.2-7-7-7-12V5l7-3z" fill="rgba(255,255,255,0.95)"/>
+            </svg>
+            Login as Admin
+        </button>
+
+        <button class="btn nurse" onclick="location.href='/auth/login/nurse'" aria-label="Login as Nurse">
+            <!-- Stethoscope icon -->
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 13v3a4 4 0 1 1-8 0v-3" stroke="rgba(255,255,255,0.95)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 13a6 6 0 0 0 0-12h-1" stroke="rgba(255,255,255,0.95)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Login as User
+        </button>
+    </div>
+</div>
+
+</div>
+</body>
+</html>

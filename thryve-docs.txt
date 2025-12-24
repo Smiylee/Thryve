@@ -1,0 +1,14 @@
+The app will contain 
+
+Role Based nurses (1 admin that can create several nurses)
+The admin is created with the aid of an admin code 
+
+The nurses log daily complaints and have shifts that can start and end when logged in and out 
+
+The student records contains recent complaints, Bio(height , weight, class) and records of last taken,[ Tetanus and Anti Malaria] 
+
+The complaints contain descriptions that can be added along side that is how the last taken is recorded
+
+TO DO
+Remember to create sessions for when the user logs in 
+

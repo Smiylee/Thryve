@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Medium AI — Browser Chat (Hugging Face Inference)</title>
+  <style>
+    :root{
+      --bg:#0f1724;--card:#0b1220;--accent:#7c3aed;--muted:#94a3b8;color-scheme:dark;
+    }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body{background:linear-gradient(180deg,#071025 0%, #071626 60%);display:flex;align-items:center;justify-content:center;padding:24px;}
+    .app{width:980px;max-width:98vw;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,0.6);color:#e6eef8}
+    header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+    h1{font-size:18px;margin:0}
+    .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+    select,input[type=text]{background:#081226;border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:8px;color:var(--muted);min-width:180px}
+    input[type=text]{width:320px}
+    .btn{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+    main{display:flex;gap:12px}
+    .left{width:60%;min-height:420px;max-height:72vh;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));padding:12px;border-radius:10px;overflow:auto}
+    .right{flex:1;min-height:420px;background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;display:flex;flex-direction:column;gap:8px}
+    .messages{display:flex;flex-direction:column;gap:10px}
+    .msg{padding:10px;border-radius:10px;max-width:90%}
+    .msg.user{align-self:flex-end;background:linear-gradient(90deg,#13293b,#0f3a53);color:#dff6ff}
+    .msg.assistant{align-self:flex-start;background:linear-gradient(90deg,#07132a,#092235);color:#e7f2ff;border:1px solid rgba(255,255,255,0.02)}
+    textarea{width:100%;min-height:84px;background:#071026;border:1px solid rgba(255,255,255,0.03);padding:10px;border-radius:8px;color:var(--muted);resize:vertical}
+    footer{display:flex;gap:8px;align-items:center}
+    .meta{font-size:13px;color:var(--muted)}
+    .small{font-size:12px;color:var(--muted)}
+    .log{font-family:monospace;background:rgba(255,255,255,0.01);padding:8px;border-radius:8px;overflow:auto;max-height:120px}
+    .row{display:flex;gap:8px;align-items:center}
+    .danger{color:#ffb4b4}
+    @media (max-width:880px){
+      .app{padding:12px}
+      main{flex-direction:column}
+      .left{width:100%}
+      .right{width:100%}
+      input[type=text]{min-width:140px;width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Medium AI Chat demo">
+    <header>
+      <div>
+        <h1>✅ Medium AI — Chat (single-file browser demo)</h1>
+        <div class="small">Simple chat UI + Hugging Face Inference API (client-side)</div>
+      </div>
+
+      <div class="controls">
+        <label class="small" for="model">Model</label>
+        <select id="model" title="choose model">
+          <option value="gpt2">gpt2 (small)</option>
+          <option value="distilgpt2">distilgpt2 (smaller and faster)</option>
+          <option value="gpt2-medium">gpt2-medium (bigger; slower)</option>
+        </select>
+
+        <input id="hf_token" type="text" placeholder="HF token (paste here securely)" aria-label="Hugging Face API token" />
+        <button id="clearBtn" class="btn secondary">Clear</button>
+        <button id="sendBtn" class="btn">Send</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="left" aria-live="polite">
+        <div class="messages" id="messages" role="log"></div>
+      </section>
+
+      <aside class="right">
+        <div>
+          <label class="meta">System prompt (assistant persona)</label>
+          <input id="systemPrompt" type="text" value="You are a helpful assistant. Keep responses concise and friendly." />
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <label class="meta">Message</label>
+          <textarea id="input" placeholder="Ask something... e.g., 'Explain transformers in simple terms'"></textarea>
+        </div>
+
+        <footer>
+          <div class="row" style="flex:1">
+            <div class="small">Max tokens</div>
+            <input id="maxTokens" type="text" value="150" style="width:72px;padding:6px;border-radius:8px;background:#071026;border:1px solid rgba(255,255,255,0.03);color:var(--muted)" />
+            <div class="small">Temperature</div>
+            <input id="temp" type="text" value="0.8" style="width:64px;padding:6px;border-radius:8px;background:#071026;border:1px solid rgba(255,255,255,0.03);color:var(--muted)" />
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <div class="small">Status: <span id="status" class="meta">idle</span></div>
+            <div style="display:flex;gap:6px">
+              <button id="saveConv" class="btn secondary">Export</button>
+              <button id="resetConv" class="btn">New conv</button>
+            </div>
+          </div>
+        </footer>
+
+        <div style="margin-top:8px">
+          <div class="small">Log</div>
+          <pre id="log" class="log small"></pre>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    // Single-file chat client for Hugging Face Inference API (text-generation)
+    // Save as chatbot.html and open in browser.
+    // Usage:
+    //  - Get a Hugging Face token from https://huggingface.co/settings/tokens (read-only inference)
+    //  - Paste token in "HF token" field and pick a model.
+    //  - Type message, press Send.
+
+    (function(){
+      const messagesEl = document.getElementById('messages');
+      const inputEl = document.getElementById('input');
+      const sendBtn = document.getElementById('sendBtn');
+      const modelEl = document.getElementById('model');
+      const hfTokenEl = document.getElementById('hf_token');
+      const statusEl = document.getElementById('status');
+      const logEl = document.getElementById('log');
+      const maxTokensEl = document.getElementById('maxTokens');
+      const tempEl = document.getElementById('temp');
+      const systemPromptEl = document.getElementById('systemPrompt');
+      const clearBtn = document.getElementById('clearBtn');
+      const resetConvBtn = document.getElementById('resetConv');
+      const saveConvBtn = document.getElementById('saveConv');
+
+      let conv = []; // {role:'user'|'assistant'|'system', text: '...'}
+      const appendLog = (s)=>{ logEl.textContent += s + "\\n"; logEl.scrollTop = logEl.scrollHeight; };
+
+      function addMessage(role, text){
+        conv.push({role, text});
+        const div = document.createElement('div');
+        div.className = 'msg ' + (role === 'user' ? 'user' : 'assistant');
+        div.innerHTML = '<div style="font-size:12px;opacity:0.8;margin-bottom:6px">'+role.toUpperCase()+'</div>' +
+                        '<div>'+escapeHtml(text).replace(/\\n/g,'<br/>')+'</div>';
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function escapeHtml(s){
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+
+      sendBtn.addEventListener('click', async ()=>{
+        const hfToken = hfTokenEl.value.trim();
+        if(!hfToken){ alert('Paste your Hugging Face API token in the HF token field.'); return; }
+        const userText = inputEl.value.trim();
+        if(!userText) return;
+
+        addMessage('user', userText);
+        inputEl.value = '';
+        statusEl.textContent = 'thinking...';
+        appendLog('Sending request to HF Inference: model=' + modelEl.value);
+
+        // Build prompt from conversation + system
+        const system = systemPromptEl.value.trim();
+        let prompt = '';
+        if(system) prompt += `System: ${system}\\n\\n`;
+        // Include last N turns as context
+        const recent = conv.slice(-12); // keep last 12 messages
+        for(const m of recent){
+          if(m.role === 'user') prompt += `User: ${m.text}\\n`;
+          else if(m.role === 'assistant') prompt += `Assistant: ${m.text}\\n`;
+          else if(m.role === 'system') prompt += `System: ${m.text}\\n`;
+        }
+        prompt += `Assistant:`;
+
+        // Prepare body for text-generation endpoint
+        const model = modelEl.value;
+        const body = {
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: parseInt(maxTokensEl.value || '150',10),
+            temperature: parseFloat(tempEl.value || '0.8'),
+            return_full_text: false,
+            // top_k, top_p, do_sample could be added
+          }
+        };
+
+        try {
+          appendLog('Request payload len: ' + prompt.length + ' chars');
+          const res = await fetch('https://api-inference.huggingface.co/models/' + encodeURIComponent(model), {
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + hfToken,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body),
+            // no-cache to avoid cached 503 responses
+            cache: 'no-store'
+          });
+
+          if(!res.ok){
+            const txt = await res.text();
+            appendLog('ERROR from HF API: ' + res.status + ' ' + txt);
+            statusEl.textContent = 'error: ' + res.status;
+            alert('HF API error: ' + res.status + '\\nSee log for details.');
+            return;
+          }
+
+          const data = await res.json();
+          // HF generation returns an array of {generated_text: "..."}
+          let gen = '';
+          if(Array.isArray(data)){
+            if(data.length>0 && data[0].generated_text !== undefined){
+              gen = data[0].generated_text;
+            } else if(data[0].error){
+              appendLog('HF response error: ' + data[0].error);
+              statusEl.textContent = 'error';
+              alert('HF API returned error: ' + data[0].error);
+              return;
+            } else {
+              gen = JSON.stringify(data, null, 2);
+            }
+          } else if(data.generated_text){
+            gen = data.generated_text;
+          } else {
+            gen = JSON.stringify(data, null, 2);
+          }
+
+          // Trim echo: some models return the prompt + continuation. Try to remove prompt prefix if present.
+          if(gen.startsWith(prompt)) gen = gen.slice(prompt.length).trim();
+
+          addMessage('assistant', gen);
+          appendLog('Received ' + gen.length + ' chars.');
+          statusEl.textContent = 'ok';
+        } catch(err){
+          appendLog('EXCEPTION: ' + String(err));
+          statusEl.textContent = 'exception';
+          alert('Network / exception: ' + err);
+        }
+      });
+
+      clearBtn.addEventListener('click', ()=>{
+        hfTokenEl.value = '';
+        appendLog('Cleared token in UI. (Token is stored only in your page session).');
+      });
+
+      resetConvBtn.addEventListener('click', ()=>{
+        conv = [];
+        messagesEl.innerHTML = '';
+        appendLog('Conversation reset.');
+      });
+
+      saveConvBtn.addEventListener('click', ()=>{
+        const blob = new Blob([JSON.stringify({meta:{model:modelEl.value, system:systemPromptEl.value, date:new Date().toISOString()}, convo:conv}, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'conversation.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        appendLog('Conversation exported.');
+      });
+
+      // handy: press Ctrl+Enter to send
+      inputEl.addEventListener('keydown', (e)=>{
+        if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ sendBtn.click(); e.preventDefault(); }
+      });
+
+      // Add a short welcome
+      (function welcome(){
+        conv.push({role:'system', text: systemPromptEl.value});
+        addMessage('assistant', 'Hi — I am your local chat assistant UI. Paste your Hugging Face token in the top-right, choose a model, type a message and press Send. For larger/production setups, route requests through a secure server to avoid exposing tokens client-side.');
+      })();
+
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body{
+            margin: 0;
+        }
+        #nonso{
+            position: fixed;
+            top: 95vh;
+            left: 192vh;
+            z-index: 1000;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <section class="header">
+        <div id="header-text">
+            <img src="/Screenshot 2025-10-24 074652.png" width="30px" id='logo'>
+           Healthbay
+           <div id="button-holder">
+            <button onclick="location.href='/dashboard'">Dashboard</button>
+           <button onclick="location.href='/complaints'">Complaints</button>
+           <button onclick="location.href='/health-tracking'" >Health Tracking</button>
+           <button onclick="location.href='/appointments'">Appointments</button>
+           <button onclick="location.href='/medications'">Medications</button>
+           <button onclick="location.href='/records'" >Medical Records</button>
+           </div>
+        </div>
+    </section>
+
+    <span id="nonso">©️ Nonso</span>
+</body>
+</html>

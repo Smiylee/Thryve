@@ -1,0 +1,427 @@
+<style>
+    body {
+        background: #f4f5f7;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .page-content {
+        max-width: 700px;
+        margin: 40px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    h1 {
+        font-size: 28px;
+        margin-bottom: 20px;
+        font-weight: 700;
+        text-align: center;
+        color: #2d7bf4;
+    }
+
+    .student-info {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 25px;
+    }
+
+    .student-info h2 {
+        font-size: 18px;
+        font-weight: 500;
+        color: #555;
+        margin: 0;
+    }
+
+    .btn-container,
+    .complaints-container {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .btn {
+        padding: 12px 20px;
+        background: #2d7bf4;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: 0.25s;
+        text-decoration: none;
+        text-align: center;
+        flex: 1;
+        min-width: 150px;
+        max-width: 220px;
+    }
+
+    .btn:hover {
+        background: #1d5fc5;
+    }
+
+    /* Optional subtle hover effect for the card */
+    .page-content:hover {
+        box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 500px) {
+        .btn-container,
+        .complaints-container {
+            flex-direction: column;
+        }
+    }
+</style>
+<style>
+    /* Modal backdrop */
+/* modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+} */
+
+/* Modal box */
+.modal-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    opacity: 0;
+    animation: slideFadeIn 0.3s forwards;
+}
+
+/* Slide and fade animation - centered */
+@keyframes slideFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.95); /* slightly smaller at start */
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1); /* final size */
+    }
+}
+
+/* Close button */
+.close-btn {
+    position: absolute;
+    top: 12px;
+    right: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #555;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.close-btn:hover {
+    color: #2d7bf4;
+}
+
+/* Modal heading */
+.modal-content h2 {
+    margin-top: 0;
+    color: #2d7bf4;
+    text-align: center;
+    font-size: 24px;
+}
+
+/* Inputs and textarea */
+.modal-content input,
+.modal-content textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #cfcfcf;
+    font-size: 14px;
+    transition: 0.2s;
+    box-sizing: border-box;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus {
+    outline: none;
+    border-color: #2d7bf4;
+    box-shadow: 0 0 6px rgba(45,123,244,0.25);
+}
+
+/* Labels */
+.modal-content label {
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+    color: #555;
+}
+
+/* Submit button */
+.modal-content .btn {
+    margin-top: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+    .modal-content {
+        padding: 20px;
+    }
+}
+#complaint-modal {
+    justify-content: center;
+    align-items: center;
+}
+.tag-input{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid #cfcfcf;
+    border-radius: 6px;
+    width: 300px;
+}
+.tag-input input {
+    border: none;
+    outline: none;
+    flex: 1;
+}
+
+#tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.tag span {
+    cursor: pointer;
+    font-weight: bold;
+}
+.complaint-card {
+    width: 30%;
+    box-shadow: 3px 3px  20px  rgb(153, 151, 151);
+    padding: 5px; 
+    display: flex;
+    flex-direction: column;
+    border: 1px solid grey; 
+    margin: 10px;
+    border-radius: 30px;
+}
+.complaint-card:hover {
+    transition: ease-in-out 0.3s;
+    box-shadow: 3px 3px  25px  rgb(105, 102, 102);
+    transform: scale(1.02);
+}
+#complaints-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+#viewComplaintLink {
+    text-decoration: none;
+    color: inherit;
+}
+</style>
+
+
+<div class="page-content">
+    <h1><%= student.name %> Records</h1>
+
+    <div class="student-info">
+        <h2>Age: <%= student.age %></h2>    
+        <h2>Class: <%= student.class %></h2>
+        <h2>Height: <%= student.height %> cm</h2>
+        <h2>Weight: <%= student.weight %> kg</h2>
+    </div>
+
+  <div id="complaints-container" >
+    <h2>Complaint</h2>
+  <% complaints.forEach( (complaint) => { %>  
+    <a id="viewComplaintLink" href="/student/view/complaint/<%= complaint.id%>">
+        <div class="complaint-card" >
+  
+  <div style="text-align: center; align-items: center;">
+    <h4>Main Complaint Identifier</h4>
+        <% let idents = complaint.sicknesses %>
+        <% idents.forEach((ident) => { %>
+            <div style="background-color:grey;padding:5px; border-radius: 5px;margin: 5px;width:50%"><%= ident.name %> </div>
+             <%})%>
+  </div>
+  <p>Medications : <%= complaint.medications%></p>
+  <p>Complaint Notes : <%= complaint.complaintNotes%></p>
+  <p>Frequency : <%= complaint.frequency%></p>
+   <p>Duration : <%= complaint.duration%></p> 
+   <p>Started : <%= complaint.started%></p>
+  </div>
+    </div>  
+    </a> 
+   
+    <% }) %>
+    
+  </div>
+
+
+
+    <div class="btn-container">
+        <button class="btn" onclick="location.href='/student/edit/<%= student.id %>'">Edit Student</button>
+        <button class="btn" onclick="location.href='/student/records'">Back to Records</button>
+    </div>
+
+    <div class="complaints-container" style="margin-top:20px;">
+        <button class="btn" onclick="showComplaintModal()">Add Complaint</button>
+    </div>
+
+
+
+    <!-- <div id="complaint-modal" class="modal" style="display:none; " > -->
+    <div id="complaint-modal" class="modal" style="display:none;" >
+        <div class="modal-content">
+            <span class="close-btn" onclick="document.getElementById('complaint-modal').style.display='none'">&times;</span>
+            <h2>Add Complaint</h2>
+            <form action="/student/add/complaint/<%=student.id%>" method="POST">
+                <label for="complaintIdent">Complaint Identifier:</label><br>
+                <input id="complaint-text" name="complaintIdent" placeholder='Main Complaint Identifier' required></input><br><br>
+
+
+                       <div class="tag-input">
+                        <ul id="tags"></ul>
+                        <input type="text" id="tagInput" placeholder="Type and Press Enter Sicknesses" />
+                       </div>
+
+                <br><br>
+                <input type="hidden" name="tags" id="sicknesses">
+
+
+                <input type="hidden" name="studentId" value="<%=student.id%>">
+                <input type="hidden" name="nurseId" value="<%=nurseId%>">
+
+
+
+               <label for="medication">Medication:</label><br>
+                <textarea id="medication" name="medication" placeholder='Medications Given' rows="4" cols="50" required></textarea><br><br>
+
+
+                <label for="complaint-text">Complaint Notes:</label><br>
+                <textarea id="complaint-text" name="complaintNotes" placeholder='Complaint Notes: {Medications Given, Complaint Notes}' rows="4" cols="50" required></textarea><br><br>
+                <!-- <label for="medication-name">Medication Name:</label><br> -->
+              
+
+                
+                <label>Frequency Per Day</label>
+                <input type="number" name="frequency" min="1" required placeholder="How Many Times A Day"><br><br>
+
+                <label>Duration</label>
+                <input type="number" name="duration" placeholder="Duration In Days" required><br><br>
+                
+            <label for="severity">Severity</label>
+                <select id="severity" name="severity">
+                    <option value="severe">Severe</option>
+                    <option value="normal">Normal</option>
+                    <option value="mild">Mild</option> 
+                </select>
+                <br><br>
+                <button type="submit" class="btn">Submit Complaint</button>
+
+            </form>
+        </div>
+
+        </div>
+
+    
+
+    
+</div>
+
+<script>
+    // Modal functionality
+    var modal = document.getElementById('complaint-modal');
+
+    // Open the modal when needed (you can add a button to trigger this)
+    // Example: document.getElementById('open-modal-btn').onclick = function() { modal.style.display = 'block'; }
+    function showComplaintModal() {
+        modal.style.display = 'block';
+    }
+
+    // Close the modal when clicking outside of it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    const input = document.getElementById('tagInput');
+    const tagsContainer = document.getElementById('tags');
+    const sicknesses = document.getElementById('sicknesses');
+
+    let tags = [];
+
+    input.addEventListener("keydown", function(e) {
+        if(e.key === 'Enter' || e.key === ',') {
+           e.preventDefault();
+
+           const value = input.value.trim();
+            if (!value || tags.includes(value)) return;
+            addTag(value);
+            input.value = '';
+        }
+    });
+
+    function addTag(text) {
+        if (!text || tags.includes(text)) return;
+        tags.push(text);
+        renderTags();
+       
+    }
+   
+    function removeTag(text) {
+      tags = tags.filter(tag => tag !== text)
+        renderTags();
+    }
+
+    function renderTags() {
+        tagsContainer.innerHTML = '';
+        tags.forEach(tag => {
+            const li = document.createElement('li');
+            li.className = 'tag';
+            const span = document.createElement('span');
+            span.innerHTML = "x";
+            span.onclick = () => removeTag(tag);
+
+            li.innerHTML = tag + '';
+            li.appendChild(span);
+            tagsContainer.appendChild(li);
+        });
+        sicknesses.value = JSON.stringify(tags);
+    }
+
+
+
+
+</script>

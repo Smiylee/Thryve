@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login</title>
+  <style>
+    /* Global reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    /* Login card */
+    .login-container {
+      background: #ffffff;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      width: 360px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(15px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    #login-text {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      color: #222;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #dcdcdc;
+      font-size: 16px;
+      background: #f1f3f4;
+      transition: all 0.25s ease;
+    }
+
+    input:focus {
+      background: #ffffff;
+      border-color: #a8c0ff;
+      box-shadow: 0 0 0 2px rgba(120,150,255,0.25);
+      transform: scale(1.02);
+      outline: none;
+    }
+
+    /* Password container with toggle */
+    .password-container {
+      position: relative;
+    }
+
+    .password-container .eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 18px;
+      user-select: none;
+    }
+
+    /* Button */
+    #logBots {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      background-color: #4a5568;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    #logBots:hover {
+      background-color: #2d3748;
+      transform: translateY(-1px);
+    }
+
+    /* Signup link */
+    #signup-link {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    #signup-link a {
+      color: #1a73e8;
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    #signup-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* Error message */
+    #errorM {
+      text-align: center;
+      color: #e53e3e;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+
+    @media(max-width: 400px){
+      .login-container { width: 90%; padding: 30px 20px; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1 id="login-text">Admin Login</h1>
+
+    <form id="loginForm" method="POST" action="/auth/login/admin">
+      <input type="text" id="username" name="username" placeholder="Username" required>
+
+      <div class="password-container">
+        <input type="password" id="password" name="password" placeholder="Password" required>
+        <span class="eye" id="togglePassword">👁️</span>
+      </div>
+
+      <p id="errorM"><%= error %></p>
+
+      <button type="submit" id="logBots">Login</button>
+
+      <p id="signup-link">
+        Don't have an account? <a onclick="location.href='/signup'">Sign Up</a>
+      </p>
+    </form>
+  </div>
+
+  <script>
+    // Toggle password visibility
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+  </script>
+</body>
+</html>

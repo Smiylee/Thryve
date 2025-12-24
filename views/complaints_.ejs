@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Complaints</h1>
+    <% if(complaints) { %>
+        <table>
+
+           <thead>
+            <th>Student</th>
+            <th>Frequency</th>
+            <th>Duration</th>
+              <th>Notes</th>
+              <th>Medication</th>
+           </thead>
+
+      <% complaints.forEach(complaint => { %>
+ 
+        <tbody>
+            <td><%= complaint.studentName %></td>
+            <td><%= complaint.frequency %> Times per day</td>
+            <td><%= complaint.duration %> Days</td>
+            <td><%= complaint.complaintNotes %></td>
+            <td><%= complaint.medication %></td>
+        </tbody>
+
+
+
+        <% }) %>
+        <% } %>
+        </table>
+
+
+        <%= error  %>
+</body>
+</html>

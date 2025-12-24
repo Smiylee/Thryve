@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .signup-container {
+      width: 350px;
+      padding: 30px 35px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+    }
+
+    #signup-text {
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 25px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      font-size: 15px;
+      transition: border 0.25s ease, background 0.25s ease;
+    }
+
+    input:focus {
+      border-color: #b0b0b0;
+      background: #fff;
+      outline: none;
+    }
+
+    .password-container {
+      position: relative;
+    }
+
+    .password-container .eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #666;
+      cursor: pointer;
+      font-size: 16px;
+      user-select: none;
+    }
+
+    #logBots {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      background: #4a4a4a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.25s ease;
+    }
+
+    #logBots:hover {
+      background: #2f2f2f;
+    }
+
+    #signup-link {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    #signup-link a {
+      color: #444;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    #signup-link a:hover {
+      color: #000;
+    }
+
+    #errorM {
+      font-weight: 600;
+      text-align: center;
+      color: red;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="signup-container">
+
+    <h1 id="signup-text">Sign Up</h1>
+
+    <form id="signupForm" method="POST" action="/signup/admin">
+
+      <input type="text" id="username" name="username" placeholder="Username" required />
+
+      <div class="password-container">
+        <input type="password" id="password" name="password" placeholder="Enter password" required />
+        <span class="eye" id="togglePassword">👁️</span>
+      </div>
+
+      <div class="password-container">
+        <input type="password" id="cpassword" name="cpassword" placeholder="Confirm password" required />
+        <span class="eye" id="toggleCPassword">👁️</span>
+      </div>
+
+      <div class="password-container">
+        <input type="password" id="adminCode" name="adminCode" placeholder="Admin Code" required />
+        <span class="eye" id="toggleAdminCode">👁️</span>
+      </div>
+
+      <p id="errorM"><%= error %></p>
+
+      <button type="submit" id="logBots">Register</button>
+
+      <p id="signup-link">
+        Already have an account?
+        <a onclick="location.href='/auth/login/admin'">Login</a>
+      </p>
+
+    </form>
+  </div>
+
+  <script>
+    // Toggles password visibility
+    function makeToggle(inputId, toggleId) {
+      const input = document.getElementById(inputId);
+      const toggle = document.getElementById(toggleId);
+      toggle.addEventListener("click", () => {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        toggle.textContent = show ? "🙈" : "👁️";
+      });
+    }
+
+    makeToggle("password", "togglePassword");
+    makeToggle("cpassword", "toggleCPassword");
+    makeToggle("adminCode", "toggleAdminCode");
+  </script>
+</body>
+</html>

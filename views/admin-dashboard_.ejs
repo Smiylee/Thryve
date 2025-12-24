@@ -1,0 +1,20 @@
+ <body>
+    
+    <div class="main">
+        <h2>Welcome to  Thryve  <%= admin.username %></h2>
+      
+
+        <div>
+            <h3>Most Common Sickness: <%= mostFrequentSickness ? mostFrequentSickness.complaintIdent : "None" %></h3>
+            <p>Cases: <%= mostFrequentSickness ? mostFrequentSickness._count.complaintIdent : 0 %></p>
+        </div>
+
+
+
+
+
+
+
+        <p>Content goes here...</p>
+    </div>
+</body>

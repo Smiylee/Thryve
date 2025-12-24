@@ -1,0 +1,33 @@
+#header-text {
+    text-align: start;
+    padding: 10px;
+    /* border-bottom: solid 0.5px; */
+    box-shadow: rgb(107, 105, 105) 1px 1px 2px;
+    display: flex;
+    flex-direction: row;
+}
+
+#header-text h6{
+ text-align: start;
+}
+
+.header button{
+     padding: 10px;
+     margin:5px;
+     border-radius: 10px;
+     border:none;
+    
+
+}
+.header button:hover {
+    background-color: rgb(155, 150, 150);
+    transition: 0.2 ease;
+}
+
+#button-holder {
+   margin-left: 10px;
+}
+
+#logo{
+    margin-right:10px
+}

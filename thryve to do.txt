@@ -1,0 +1,15 @@
+Create admins with admin code 
+admin creates nurses 
+
+
+
+create shift for the nurse when the nurse logs in 
+create student in the nurse or admin page 
+
+add complaints, linked to students, 
+
+
+th complants contain checkbox tags of the duration during th 
+
+
+continue the complaints thing 

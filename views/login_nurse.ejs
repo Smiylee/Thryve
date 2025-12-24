@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Inter", Arial, sans-serif;
+        background: #f5f5f5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      .login-container {
+        width: 340px;
+        padding: 30px 35px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+      }
+
+      #login-text {
+        text-align: center;
+        font-size: 26px;
+        margin-bottom: 25px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        font-size: 15px;
+        background: #fafafa;
+        transition: border 0.25s ease, background 0.25s ease;
+      }
+
+      input:focus {
+        border: 1px solid #a8a8a8;
+        background: #fff;
+        outline: none;
+      }
+
+      .password-container {
+        position: relative;
+      }
+
+      .password-container .eye {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #666;
+      }
+
+      #logBots {
+        margin-top: 15px;
+        width: 100%;
+        padding: 12px;
+        background: #4a4a4a;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.25s ease;
+      }
+
+      #logBots:hover {
+        background: #333;
+      }
+
+      #signup-link {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 14px;
+      }
+
+      #signup-link a {
+        color: #444;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      #signup-link a:hover {
+        color: #000;
+      }
+
+      #errorM {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="login-container">
+      <h1 id="login-text">Login</h1>
+
+      <form id="loginForm" method="POST" action="/auth/login/nurse">
+        
+        <input
+          type="text"
+          id="username"
+          name="username"
+          placeholder="Username"
+          required
+        />
+
+        <div class="password-container">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter password"
+            required
+          />
+          <span class="eye" id="togglePassword">👁️</span>
+        </div>
+
+        <p id="errorM" style="color: red; text-align: center; font-weight: 600;">
+          <%= error %>
+        </p>
+
+        <button type="submit" id="logBots">Login</button>
+
+        <p id="signup-link">
+          Don't have an account?
+          <a onclick="location.href='/signup'">Sign Up</a>
+        </p>
+      </form>
+    </div>
+
+    <script src="/js/login.js"></script>
+
+  </body>
+</html>

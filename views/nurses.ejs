@@ -1,0 +1,146 @@
+<div style="min-height: 100vh; background-color: #f5f6fa; padding: 40px 24px; font-family: 'Segoe UI', sans-serif;">
+    <div style="max-width: 1100px; margin: 0 auto;">
+
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px;">
+            <h1 style="font-size: 2em; color: #333; margin: 0; font-weight: 700;">
+                Nurses
+            </h1>
+   <div style="justify-content: end;">
+
+
+            <button onclick="location.href='/admin/add/nurse'"
+                style="
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 10px 22px;
+                    cursor: pointer;
+                    font-size: 0.95em;
+                    font-weight: 600;
+                    box-shadow: 0 3px 12px rgba(102,126,234,0.25);
+                    transition: 0.2s ease;
+                "
+                onmouseover="this.style.opacity='0.9'"
+                onmouseout="this.style.opacity='1'"
+            >
+                + Add Nurse
+            </button>
+
+             <button onclick="location.href='/admin/shifts'"
+                style="
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 10px 22px;
+                    cursor: pointer;
+                    font-size: 0.95em;
+                    font-weight: 600;
+                    box-shadow: 0 3px 12px rgba(102,126,234,0.25);
+                    transition: 0.2s ease;
+                "
+                onmouseover="this.style.opacity='0.9'"
+                onmouseout="this.style.opacity='1'"
+            >
+                See Shift History
+            </button>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <% if (error) { %>
+            <div style="
+                background-color: #fde8e8;
+                border-left: 4px solid #e53e3e;
+                padding: 14px 16px;
+                border-radius: 6px;
+                margin-bottom: 20px;
+                color: #b91c1c;
+                font-size: 0.9em;
+            ">
+                <%= error %>
+            </div>
+        <% } %>
+
+        <!-- Nurses Grid -->
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 22px;
+        ">
+            <% nurses.forEach((nurse) => { %>
+                <div 
+                    style="
+                        background: white;
+                        border-radius: 10px;
+                        padding: 22px;
+                        box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+                        transition: 0.25s ease;
+                        border: 1px solid #f0f0f0;
+                    "
+                    onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 18px rgba(0,0,0,0.1)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(0,0,0,0.05)'"
+                >
+                    <h2 style="font-size: 1.2em; margin-bottom: 10px; font-weight: 600; color: #222;">
+                        <%= nurse.name %>
+                    </h2>
+
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #555;">
+                        <strong>Email:</strong> 
+                        <span style="color: #667eea; font-weight: 600;"><%= nurse.email %></span>
+                    </p>
+
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #555;">
+                        <strong>Phone:</strong> 0<%= nurse.phone %>
+                    </p>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 10px; margin-top: 18px;">
+                        <button 
+                            onclick="location.href='/admin/edit/nurse/<%= nurse.id %>'"
+                            style="
+                                flex: 1;
+                                background: #667eea;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                padding: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                font-size: 0.85em;
+                                transition: 0.2s ease;
+                            "
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'"
+                        >
+                            Edit
+                        </button>
+
+                        <button 
+                            onclick="location.href='/admin/delete/nurse/<%= nurse.id %>'"
+                            style="
+                                flex: 1;
+                                background: #e53e3e;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                padding: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                font-size: 0.85em;
+                                transition: 0.2s ease;
+                            "
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+
+    </div>
+</div>

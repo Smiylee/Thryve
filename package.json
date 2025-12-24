@@ -1,0 +1,32 @@
+{
+  "name": "health-bay",
+  "version": "1.0.0",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prisma:migrate": "npx prisma migrate dev --name init",
+    "postinstall": "npx prisma generate",
+    "prisma:studio": "npx prisma studio",
+    "prisma:push": "npx prisma db push"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "connect-sqlite3": "^0.9.16",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "prisma": "^6.19.1"
+  },
+  "description": ""
+}
