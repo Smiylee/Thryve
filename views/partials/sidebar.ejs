@@ -79,19 +79,50 @@
         }
 
         /* Main content */
-        .main {
-            /* flex: 1; */
-            padding: 40px;
-            overflow-y: auto;
-        }
+       .main {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+
+.nav{ 
+    width: 230px;
+    transition: width 0.3s ease;
+    overflow: hidden;
+}
+.nav.collapsed{
+    width: 70px;
+}
+
+.nav.collapsed button{
+    text-align: center;
+    padding: 12px 0;
+    font-size: 0;
+}
+
+.nav.collapsed button::before{
+    content: ".";
+    font-size: 16px;
+}
+
+.nav.collapsed h1{
+    font-size: 0;
+}
+
+.nav.collapsed .menu-btn::before{
+    content: "☰";
+    font-size: 20px;
+    display: block;
+}
     </style>
 
 </head>
 <body>
 
-    <div class="nav">
+    <div class="nav" id="sidebar">
         <h1>Thryve</h1>
-
+        <button id="toggleNav" class="menu-btn">☰</button>   
         <button>Dashboard</button>
         <button>Complaints</button>
         <button>Health Tracking</button>
@@ -114,3 +145,13 @@
 
 </body>
 </html>
+
+<script>
+    const toggleBtn = document.getElementById("toggleNav");
+    const sidebar = document.getElementById("sidebar");
+
+    toggleBtn.addEventListener("click", () => {
+        sidebar.classList.toggle("collapsed");
+    });
+</script>
+

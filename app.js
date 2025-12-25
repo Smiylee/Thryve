@@ -186,18 +186,6 @@ app.get("/admin/record-books", (req,res) => {
   res.render("record-books",{})
 })
 
-
-
-
-
-
-
-
-
-
-
-
-
 app.get("/admin/shifts", async (req,res) => {
   try {
 

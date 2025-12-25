@@ -15,7 +15,7 @@ A digital healthbay management system for schools.
 - Node.js
 - Express
 - Prisma
-- SQLite / PostgreSQL
+- SQLite
 - EJS
 
 ## Why I Built This
