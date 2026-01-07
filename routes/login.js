@@ -16,20 +16,23 @@ router.post("/login/admin", async (req,res)=> {
        try {
 
            const {username,password} = req.body;
-           const user  = await prisma.admin.findFirst({where : {username} }) 
+           const user  = await prisma.admin.findUnique({where : {username} }) 
            if (!user) {return res.render("login_admin"), {error: "User Not Found"}}
 
            const isPasswordValid = bcrypt.compare(password, user.password);
            
            if (!isPasswordValid) {
-            return res.render("login_admin"), {error: "Password Wrong"}
-        } 
-                   
-
-            
-        //  res.redirecr('/admin/dashboard');
+            return res.render("login_admin"), {error: "Invalid Password"}
+      
+        }  
+        
         req.session.admin = {username, id: user.id}
         res.redirect('/admin/dashboard')
+                   
+ 
+            
+        //  res.redirecr('/admin/dashboard');
+       
         // res.render("admin-dashboard",{user, error: ""})
 
        }  catch(err) {

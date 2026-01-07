@@ -9,7 +9,7 @@ datasource db {
 
 model Admin {
   id          Int       @id @default(autoincrement())
-  username    String
+  username    String @unique
   password    String
   adminCode   String?    
   nurses      Nurse[]
@@ -89,4 +89,51 @@ model Sickness {
   id    Int    @id @default(autoincrement())
   name  String @unique
   complaints Complaint[] @relation("ComplaintSicknesses")
+}
+
+model RecordTemplate {
+  id      Int   @id @default(autoincrement())
+  name    String 
+  createdAt    DateTime @default(now())
+
+  fields    FieldDefinition[]
+
+  rows      RecordEntry[]  
+  
+}
+
+
+
+model FieldDefinition {
+  id       Int  @id @default(autoincrement())
+  templateId  Int 
+  type   String
+  label String
+  FieldValue  FieldValue[]
+  required  Boolean @default(false)
+  order   Int
+
+
+  template   RecordTemplate  @relation(fields: [templateId], references: [id])
+}
+
+model RecordEntry {
+  id    Int @id @default(autoincrement())
+  templateId Int
+  createdAt DateTime @default(now())
+  values FieldValue[]
+
+
+  template RecordTemplate @relation(fields:[templateId], references: [id])
+
+} 
+
+model FieldValue{
+  id Int  @id @default(autoincrement())
+  rowId Int
+  columnId Int
+  value String
+
+    row RecordEntry @relation(fields:[rowId], references: [id])
+    column FieldDefinition @relation(fields:[columnId], references: [id])
 }

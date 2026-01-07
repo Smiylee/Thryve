@@ -159,7 +159,7 @@ const mostCommonSicknesses = await prisma.sickness.findMany({
       _count: 'desc'
     }
   },
-  take: 1
+  take: 5
 })
 
 console.log(mostCommonSicknesses)
