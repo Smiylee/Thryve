@@ -108,7 +108,7 @@ model FieldDefinition {
   id       Int  @id @default(autoincrement())
   templateId  Int 
   type   String
-  label String
+  name String
   FieldValue  FieldValue[]
   required  Boolean @default(false)
   order   Int

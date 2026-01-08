@@ -182,8 +182,15 @@ console.log(mostCommonSicknesses)
   res.render("analytics",{mostCommonSicknesses})
 })
 
-app.get("/admin/record-books", (req,res) => {
-  res.render("record-books",{})
+app.get("/admin/record-books", async (req,res) => {
+
+  const recordBooks = await prisma.recordTemplate.findMany({
+    orderBy: {createdAt: 'desc'},
+    take: 10
+  }
+  );
+
+  res.render("record-books",{error: "", recordBooks})
 })
 
 app.get("/admin/shifts", async (req,res) => {
@@ -387,6 +394,38 @@ if (req.session.nurse || req.session.admin) {
 } else {
   res.redirect("/auth/login/nurse")
 }
+})
+
+
+
+app.post('/admin/create/record-books', async (req,res) => {
+  
+    const {tableName, columns} = req.body;
+
+     if (!tableName || !columns.length) {
+    return res.status(400).render("record-books",{error: "Invalid input"});
+  }
+    const template  = await prisma.recordTemplate.create({
+        data: {
+            name: tableName
+        }
+    })
+  for (const col of columns) {
+          await prisma.fieldDefinition.create({
+            data : {
+              templateId: template.id,
+              name: col.name,
+              type: col.type,
+              required: col.required,
+              order: col.order
+            }
+          })
+  }
+
+ 
+      // return res.status(500).render("record-books",{error: err.message})
+      res.redirect("/admin/record-books")
+    
 })
 
 

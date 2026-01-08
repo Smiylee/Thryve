@@ -1,1 +1,121 @@
+<style>
+    .record {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #fff;
+    }
+</style>
+
+
+
+
+
 <h1>Record Books</h1>
+<input type="text" placeholder="Search Record Books" style="padding: 8px; width: 300px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px;">
+<button>Create New Records</button>
+ <% recordBooks.forEach(recordBook => { %>
+    <div style="display: flex;flex-direction: row; gap: 5px;margin: 10px;">
+        <h3><%= recordBook.name %></h3>
+        <button>View Record Book</button>
+    </div>
+    <% }) %>
+
+<!-- <form class="record" id="tableForm" style="display: flex; flex-direction: column; gap: 10px;">
+    <input type="text" name="tableName" placeholder="Enter Record Book Name" required>
+   <label for="columns">Define Columns</label>
+
+   <div id="columnsContainer"></div>
+   <button id="addColumnBtn" type="button">Add column +</button>
+    <button type="submit">Create Record Book</button>
+   
+</form> -->
+
+<div><%= error %></div>
+
+
+<script>
+   const addColumnBtn = document.getElementById("addColumnBtn");
+   
+    addColumnBtn.addEventListener("click", e => {
+        e.preventDefault();
+        addColumns();
+    })
+
+function addColumns () {
+    const container= document.createElement('div');
+container.className = "col-def";
+  container.innerHTML =`
+     <input type="text" class="col-name" placeholder="Column Name" required>
+    <select class="col-type">
+        <option value="STRING">STRING</option>
+        
+        <option value="NUMBER">NUMBER</option>
+        <option value="DATE">DATE</option>
+        <option value="BOOLEAN">BOOLEAN</option>
+    </select>
+     <input type="checkbox" class="col-required">Required</input>
+
+    <button type="button" class="remove-btn">❌</button>
+    `;
+
+    container.querySelector(".remove-btn").onclick = () => container.remove();
+
+  document.getElementById("columnsContainer").appendChild(container);
+
+
+
+
+}
+    
+const tableForm = document.getElementById("tableForm");
+
+tableForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const tableName = tableForm.tableName.value;
+
+    const columns =[];
+  
+document.querySelectorAll(".col-def").forEach((colDef,index) => {
+   
+
+    columns.push({
+        name: colDef.querySelector(".col-name").value,
+        type: colDef.querySelector(".col-type").value,
+        order: index + 1,
+        required: colDef.querySelector(".col-required").checked
+    });
+})
+
+if (columns.length === 0) {
+    alert("Please add at least one column");
+    return;
+}
+
+const names = columns.map(col => col.name.toLowerCase());
+const uniqueNames = new Set(names);
+
+if(uniqueNames.size !== names.length) {
+    alert("Column names must be unique");
+    return;
+}
+
+
+const res = await fetch('/admin/create/record-books', {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({tableName,columns})
+});
+
+if (!res.ok) {
+    alert("Failed to create record book");
+    return;
+
+}
+window.location.reload();
+}
+
+</script>
+ 
