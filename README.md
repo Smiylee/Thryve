@@ -1,29 +1,43 @@
+# Thryve
 
-# Thryve HealthBay
+Thryve helps a school health office keep student health records, visit notes, and nurse shifts in one place. It is designed for the school nurse and the person managing the health office.
 
-A digital healthbay management system for schools.
+## What you can do
 
-## Features
-- Role-based access (Admin, Nurse)
-- Nurse shift tracking
-- Student bio & health records
-- Complaint logging
-- Medication schedules & daily records
-- Tetanus & Anti-malaria tracking
+- Find a student or add and update their record.
+- Record a visit, including the complaint, notes, medication, and severity.
+- See past visits and mark a case as resolved.
+- Clock in and out, and review shift records.
+- View a summary of visits, open cases, and common illnesses.
 
-## Tech Stack
-- Node.js
-- Express
-- Prisma
-- SQLite
-- EJS
+## Opening Thryve
 
-## Why I Built This
-I built Thryve to replace the paper-based healthbay system in my school...
+Someone responsible for the school's computer will need to install and start Thryve first. Once it is running:
 
-## Running this version
+1. Open a web browser such as Chrome or Safari.
+2. Go to **http://localhost:3000** if you are on the same computer as Thryve. If it is running on another school computer, ask your administrator for its web address.
+3. Choose the **Nurse** or **Matron** sign-in page.
+4. Enter the username or email and password your administrator gave you.
 
-Requires Node.js 20+ and npm. From the project directory:
+There is no shared starter password. If you cannot sign in, ask your administrator to check your account or reset your access.
+
+## Everyday use
+
+**Find a student:** Choose **Student records**, then search by the student's name or class. Open the student record to see their details and visit history.
+
+**Add a student:** Choose **Add student**, enter the details you have, and save. Height, weight, and treatment dates can be left blank if you do not have them.
+
+**Record a visit:** Open the student's record and complete **Record a health visit**. Add the main complaint and your notes. You can include illness names separated by commas. Save the visit to add it to the student's history and the dashboard.
+
+**Close a case:** From the visit in the student's history, choose **Mark resolved** when the case is resolved. The visit remains in the student's record.
+
+**Track a shift:** Nurses can open **My shifts** and use **Clock in** or **Clock out**. Signing out ends an open shift. If you close the browser without signing out, ask the matron to review the shift.
+
+**Review activity:** The overview shows recent visits and open cases. Choose **Analytics** to change the date range and see visit counts and trends. These reports summarize recorded visits; they are not diagnoses.
+
+## Installing or updating Thryve
+
+These steps are for the person who manages the computer. They require Node.js 20 or newer and npm. Open Terminal (Mac) or Command Prompt (Windows), go to the Thryve project folder, then run:
 
 ```sh
 npm ci
@@ -31,27 +45,26 @@ npm run db:setup
 npm start
 ```
 
-Open http://localhost:3000. The default database is `prisma/thryve.db`.
-For a stable session across restarts, set `SESSION_SECRET` in your shell to a long random value.
-You can also set `DATABASE_URL` and `PORT`; see `.env.example`. To load a `.env` file into the app with Node 20.6+, use `node --env-file=.env app.js` (plain `npm start` does not load it).
+Keep that window open while the website is in use. On that computer, open **http://localhost:3000** in a browser. To stop Thryve, return to the Terminal or Command Prompt and press **Ctrl+C**.
 
-`db:setup` initializes an empty database or performs an additive upgrade of the supplied database. It creates a timestamped SQLite backup before changing an existing database, adds shift validation metadata, closes legacy duplicate open shifts at the next recorded login time, and installs a unique index allowing only one open shift per nurse. Run this before starting the updated app. Do not reset your existing database or replay the old historical migrations: those migrations do not match the supplied database's current schema. Use `db:setup` again after any `prisma db push` operation to ensure the partial unique index is present.
+The database is stored in `prisma/thryve.db`. Before setup changes an existing database, it makes a dated backup beside the database. Keep that database and its backups safe; they contain student records. Do not delete the database or run database reset commands to troubleshoot a problem.
 
-## Completed workflows
+For a stable sign-in session between restarts, the administrator can set a private `SESSION_SECRET`. Optional settings are listed in `.env.example`. A `.env` file is not loaded automatically by `npm start`; with Node.js 20.6 or newer, start with `node --env-file=.env app.js` to load it.
 
-- **Shifts:** nurse login starts one shift, repeated logins reuse it, and clock-out ends it. The matron sees their team's active/completed shifts, can end a forgotten shift, and validates completed records. Validation stores the matron ID and time. Closing a tab or expiring a session does not end attendance; the matron must review forgotten shifts. An open shift is not proof that someone is currently online.
-- **Students:** authenticated staff can search, create, and edit student profiles, including optional measurements and treatment dates. Nurses record health visits and mark cases resolved; history remains attached to the student.
-- **Analytics:** 7/30/90-day views show visit counts, distinct students seen, open cases from the selected period, daily UTC trends, illness counts, severity, and recent visits. Multi-illness visits count once per illness. These are recorded complaints, not confirmed diagnoses or a population disease rate.
-- **Access:** matron routes require an admin session; nurse visit authorship comes from the session. Password verification is awaited, new passwords are hashed, and legacy plaintext nurse passwords upgrade on successful login.
+## Sample data
 
-This application's existing student registry is shared across authenticated staff in a single school. Matron nurse and shift lists are scoped to their assigned team. It does not implement separate school tenants.
-
-## Regression checks
+To preview the screens with clearly marked sample students and visits, an administrator account must already exist. Run:
 
 ```sh
-npm test
+npm run demo:seed
 ```
 
-The workflow test uses an isolated temporary database and checks authentication, duplicate logins, shift permissions, student creation/editing, visit authorship, page rendering, analytics, resolution, clock-out, and validation. It does not alter the school's database. `npm run test:unit` runs only pure validation and analytics tests.
+The sample nurse sign-in is `demo.nurse@thryve.test` with password `DemoNurse123!`. Sample records are labeled `[DEMO]`. Remove only the sample records with:
 
-Run these checks after future changes to catch missing features. A failed check reports the regression; it does not automatically rewrite production code or data.
+```sh
+npm run demo:clear
+```
+
+## Checks for developers
+
+Run `npm test` to check the main sign-in, student, visit, shift, and reporting workflows. The tests use a temporary database and do not change the school's records.
