@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f0f2f5">
+  <title><%= role === 'admin' ? 'Matron' : 'Nurse' %> sign in · Thryve</title>
+  <link rel="stylesheet" href="/auth.css">
+</head>
+<body>
+  <div class="auth-shell">
+    <header class="auth-header"><a class="wordmark" href="/" aria-label="Thryve home">thryve<span class="brand-period">.</span></a><span class="header-caption">School health workspace.</span></header>
+    <main class="sign-in-panel">
+      <section class="intro" aria-labelledby="sign-in-title">
+        <span class="workspace-label"><span class="status-dot" aria-hidden="true"></span> SCHOOL HEALTH WORKSPACE</span>
+        <h1 id="sign-in-title">Sign in</h1>
+        <p class="intro-description">Access your school health workspace.</p>
+        
+      </section>
+      <section class="form-section" aria-labelledby="form-title">
+        <nav class="role-switch" aria-label="Sign-in role">
+          <a href="/auth/login/nurse" <%- role === 'nurse' ? 'aria-current="page"' : '' %>>Nurse</a>
+          <a href="/auth/login/admin" <%- role === 'admin' ? 'aria-current="page"' : '' %>>Matron</a>
+        </nav>
+        <div class="form-heading"><h2 id="form-title">Welcome back</h2><p>Sign in to your <%= role === 'admin' ? 'matron' : 'nurse' %> workspace.</p></div>
+        <form id="loginForm" method="post" action="/auth/login/<%= role %>">
+          <% if (error) { %><p class="form-error" role="alert" id="login-error"><%= error %></p><% } %>
+          <div class="field"><label for="username"><%= role === 'admin' ? 'Username' : 'Email or full name' %></label><input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required <%- error ? 'aria-describedby="login-error"' : '' %>></div>
+          <div class="field"><label for="password">Password</label><div class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" required><button class="visibility-toggle" id="togglePassword" type="button" aria-controls="password" aria-pressed="false">Show</button></div></div>
+          <p class="account-help"><%= role === 'admin' ? 'Use the credentials you created for your school.' : 'Your matron can help with account access.' %></p>
+          <div class="form-actions"><% if (role === 'admin') { %><a class="text-link" href="/signup">Create an account</a><% } else { %><a class="text-link" href="/">Back to home</a><% } %><button class="submit-button" type="submit">Sign in <span aria-hidden="true">→</span></button></div>
+        </form>
+      </section>
+    </main>
+    <footer class="auth-footer"><span>Thryve · School health workspace</span><span></span></footer>
+  </div>
+  <script src="/js/login.js"></script>
+</body>
+</html>

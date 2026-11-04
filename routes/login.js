@@ -1,76 +1,31 @@
-import express from 'express'
-import fs from 'fs'
-import bcrypt from 'bcryptjs'
-
-
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
-const router = express.Router()
-
-router.get('/login/admin',(req,res)=> {
-    res.render("login_admin",{error: ""})
-})
-router.post("/login/admin", async (req,res)=> {
-       try {
-
-           const {username,password} = req.body;
-           const user  = await prisma.admin.findUnique({where : {username} }) 
-           if (!user) {return res.render("login_admin"), {error: "User Not Found"}}
-
-           const isPasswordValid = bcrypt.compare(password, user.password);
-           
-           if (!isPasswordValid) {
-            return res.render("login_admin"), {error: "Invalid Password"}
-      
-        }  
-        
-        req.session.admin = {username, id: user.id}
-        res.redirect('/admin/dashboard')
-                   
- 
-            
-        //  res.redirecr('/admin/dashboard');
-       
-        // res.render("admin-dashboard",{user, error: ""})
-
-       }  catch(err) {
-        res.status(500).render("login_admin",{error: err.message})
-       }
-})
-
-router.get('/login/nurse',(req,res)=> {
-    res.render("login_nurse", {error: ""})
-})
-
-
-
-
-router.post("/login/nurse", async (req,res)=> {
-    try {
-        const {username,password} = req.body;
-        const name = username
-        const user  =  await prisma.nurse.findFirst({where : {name} }) 
-        if (!user) {return res.render("login_nurse", {error: "User Not Found"})}
-        const isPasswordValid = password === user.password;
-        if (!isPasswordValid) {return res.render("login_nurse", {error: "Invalid Password"})}
-
-        req.session.nurse = {name, id: user.id}
-        await prisma.shift.create({
-            data: {
-                nurse: {connect: {id: user.id}},
-                nurseName: user.name,
-                startTime: new Date(),
-                endTime: null
-            }
-        })
-        res.render("nurse-dashboard",{user, error: ""})
-    } catch (err) {
-       res.status(500).render("login_nurse",{error: err.message})
-    }
-})
-
-
-
-export default router
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import { prisma } from '../lib/db.js';
+const router = express.Router();
+for (const role of ['admin', 'nurse']) {
+  router.get(`/login/${role}`, (req,res) => res.render(`login_${role}`, {error: ''}));
+  router.post(`/login/${role}`, async (req,res) => {
+    const username = String(req.body.username || '').trim();
+    const password = String(req.body.password || '');
+    const user = role === 'admin' ? await prisma.admin.findUnique({where: {username}}) : await prisma.nurse.findFirst({where: {OR: [{email: username}, {name: username}]}});
+    const hashed = user?.password.startsWith('$2');
+    const valid = user && password && (hashed ? await bcrypt.compare(password, user.password) : role === 'nurse' && password === user.password);
+    if (!valid) return res.status(401).render(`login_${role}`, {error: 'Invalid username or password.'});
+    if (!hashed) await prisma.nurse.update({where: {id: user.id}, data: {password: await bcrypt.hash(password, 12)}});
+    await new Promise((resolve,reject) => req.session.regenerate(err => err ? reject(err) : resolve()));
+    if (role === 'nurse') {
+      // The partial unique database index also protects simultaneous logins.
+      try {
+        await prisma.$transaction(async tx => {
+          const active = await tx.shift.findFirst({where: {nurseId: user.id, endTime: null}});
+          if (!active) await tx.shift.create({data: {nurseId: user.id, nurseName: user.name, startTime: new Date()}});
+        });
+      } catch (error) {
+        if (error.code !== 'P2002') throw error;
+      }
+      req.session.nurse = {id: user.id, name: user.name};
+    } else req.session.admin = {id: user.id, username: user.username};
+    res.redirect(role === 'admin' ? '/admin/dashboard' : '/nurse/dashboard');
+  });
+}
+export default router;

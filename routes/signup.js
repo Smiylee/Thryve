@@ -1,8 +1,8 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
-import {PrismaClient} from '@prisma/client'
+import { prisma } from '../lib/db.js'
 const router  = express.Router()
-const prisma = new PrismaClient()
+
 
 router.get("/signup",(req,res)=> {
     res.render('signup',{error: ""})
@@ -11,7 +11,7 @@ router.get("/signup",(req,res)=> {
 
 router.post('/signup/admin', async (req,res)=> {
     const {username, password, cpassword, adminCode} = req.body;
-    username.trim();
+    if (typeof username !== "string" || typeof password !== "string" || password.length < 8) return res.status(400).render("signup", {error: "Enter a username and a password of at least 8 characters."});
   const usernameString = String(username.trim()); // Trim and assign back to usernameString
   const adminCodeText = String(adminCode);
   

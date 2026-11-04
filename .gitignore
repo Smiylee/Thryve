@@ -5,3 +5,7 @@ node_modules/
 .prisma/thryve.db
 
 /generated/prisma
+
+# Local session storage and database backups
+sessions.sqlite*
+prisma/*.backup-*

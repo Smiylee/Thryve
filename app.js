@@ -1,434 +1,176 @@
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { PrismaClient } from '@prisma/client';
-import SQLiteStoreFactory from "connect-sqlite3";
-
-const prisma = new PrismaClient();
-
-const PORT = 3000;
-const app = express();
-
-// const SQLiteStore = SQLiteStoreFactory(express.session);
-import session from "express-session";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use(express.static(__dirname + '/public'));
-
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-
-import loginRoutes from "./routes/login.js"
-import signupRoutes from "./routes/signup.js"
-import { error } from 'console';
-// import adminRoutes from "./routes/admin.js"
-
-
-// app.use(
-//   session({
-//    store: new SQLiteStore({ db: "sessions.sqlite", dir: "." }),
-//     secret: "939a41a93d5b32936dce8307489b26231133c17bf4872c32c8c941122f61b73a5ab4991c581a57aa10a973d868ce843470ec37e46a596e5d4985385408d0a3f9", 
-//     resave: false,
-//     saveUninitialized: false,
-//     cookie: {
-//       maxAge: 1000 * 60 * 60 * 24, 
-//       sameSite: "lax", 
-//     },
-//   })
-// );
-
-
-app.use(session({
-    secret: "939a41a93d5b32936dce8307489b26231133c17bf4872c32c8c941122f61b73a5ab4991c581a57aa10a973d868ce843470ec37e46a596e5d4985385408d0a3f9", 
-    resave: false,            
-    saveUninitialized: true,  // save new sessions
-    cookie: { 
-      maxAge: 1000 * 60 * 60 * 24, 
-      sameSite: "lax",
-      secure: false 
-    } 
-}));
-
-
-app.use("/auth",loginRoutes)
-app.use("/",signupRoutes)
-
-// app.use("/admin",adminRoutes)
-
-app.get("/",(req,res)=> {
-  res.render("index",{})
-})
-
-
-// app.get("/login", (req, res) => {
-  //     res.sendFile(path.join(__dirname, 'views', 'login.html'));
-  // });
-  
-  app.get("/dashboard", (req, res) => {
-  res.render('dashboard', {});
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { randomBytes } from 'node:crypto';
+import session from 'express-session';
+import SQLiteStoreFactory from 'connect-sqlite3';
+import bcrypt from 'bcryptjs';
+import { prisma } from './lib/db.js';
+import { studentData, summarize } from './lib/health.js';
+import loginRoutes from './routes/login.js';
+import signupRoutes from './routes/signup.js';
+const root = path.dirname(fileURLToPath(import.meta.url));
+export const app = express();
+const SQLiteStore = SQLiteStoreFactory(session);
+app.set('view engine', 'ejs'); app.set('views', path.join(root, 'views'));
+app.use(express.static(path.join(root, 'public'), {index: false}));
+app.use(express.urlencoded({extended: true, limit: '100kb'})); app.use(express.json({limit: '100kb'}));
+app.use(session({store: new SQLiteStore({db: 'sessions.sqlite', dir: process.env.SESSION_DIR || root}), secret: process.env.SESSION_SECRET || randomBytes(48).toString('hex'), resave: false, saveUninitialized: false, cookie: {httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 86400000}}));
+app.use((req,res,next) => {
+  res.locals.isAdmin = !!req.session.admin;
+  res.locals.currentPath = req.path;
+  res.locals.viewer = req.session.admin?.username || req.session.nurse?.name || '';
+  res.locals.error = '';
+  if (req.session.admin || req.session.nurse) res.set('Cache-Control', 'no-store');
+  // Block cross-origin writes, including JSON requests.
+  if (req.method === 'POST' && req.headers.origin && new URL(req.headers.origin).host !== req.get('host')) return res.status(403).send('Invalid request origin.');
+  next();
 });
-
-  app.get("/admin/dashboard", async (req, res) => {
-if (req.session.admin){
- 
-     const mostFrequentSickness = await prisma.complaint.groupBy({
-      by: ["complaintIdent"],
-      _count: {
-        complaintIdent: true
-      },
-      orderBy: {
-        _count: {
-          complaintIdent: "desc"
-        }
-      },
-      take: 1
-    });
-
-
-  res.render('admin-dashboard', {admin: req.session.admin,mostFrequentSickness: mostFrequentSickness[0] || null });
-} else {
-  res.redirect("/auth/login/admin")
+app.use('/auth', loginRoutes); app.use('/', signupRoutes);
+app.get('/', (req,res) => req.session.admin || req.session.nurse ? res.redirect('/dashboard') : res.render('index'));
+app.use((req,res,next) => {
+  if (!req.session.admin && !req.session.nurse) return res.redirect('/auth/login/nurse');
+  if (req.path.startsWith('/admin') && !req.session.admin) return res.status(403).render('message', {title: 'Matron access required', message: 'This page is available to the matron.'});
+  next();
+});
+const id = value => { const n = Number(value); if (!Number.isSafeInteger(n) || n < 1) { const e = new Error('Invalid record ID.'); e.status = 400; throw e; } return n; };
+const missing = () => { const e = new Error('Record not found.'); e.status = 404; throw e; };
+app.get('/dashboard', (req,res) => res.redirect(req.session.admin ? '/admin/dashboard' : '/nurse/dashboard'));
+async function dashboard(req,res) {
+  const days = [7,30,90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+  const since = new Date(); since.setUTCHours(0,0,0,0); since.setUTCDate(since.getUTCDate() - days + 1);
+  const [complaints, students, activeShifts] = await Promise.all([
+    prisma.complaint.findMany({where: {started: {gte: since}}, include: {sicknesses: true, student: true}, orderBy: {started: 'desc'}}),
+    prisma.student.count(), prisma.shift.findMany({where: {endTime: null, ...(req.session.admin ? {nurse: {adminId: req.session.admin.id}} : {nurseId: req.session.nurse.id})}, include: {nurse: true}, orderBy: {startTime: 'desc'}})
+  ]);
+  const stats = summarize(complaints, days);
+  const classes = Object.entries(complaints.reduce((groups, visit) => {
+    const key = visit.student.class; groups[key] ||= {visits: 0, open: 0};
+    groups[key].visits++; if (!visit.ended) groups[key].open++; return groups;
+  }, {})).sort((a,b) => b[1].visits - a[1].visits);
+  const openCases = await prisma.complaint.findMany({where: {ended: null}, include: {student: true}, orderBy: {started: 'asc'}});
+  res.render(req.path.endsWith('/analytics') || req.path === '/health-tracking' ? 'insights' : 'overview', {stats, students, activeShifts, classes, openCases});
 }
-
-
-
+app.get(['/admin/dashboard','/admin/analytics','/nurse/dashboard','/nurse/analytics','/health-tracking'], dashboard);
+app.get('/admin/nurses', async (req,res) => res.render('nurses', {nurses: await prisma.nurse.findMany({where: {adminId: req.session.admin.id}})}));
+app.get('/admin/add/nurse', (req,res) => res.render('add-nurse'));
+app.post('/admin/add/nurse', async (req,res) => {
+  const {name,email,password,confirmPassword,phoneNumber} = req.body;
+  if (!name?.trim() || !email?.includes('@') || !password || password.length < 8 || password !== confirmPassword) return res.status(400).render('add-nurse', {error: 'Enter a name, valid email, and matching passwords of at least 8 characters.'});
+  try { await prisma.nurse.create({data: {name: name.trim(), email: email.trim().toLowerCase(), phone: phoneNumber, password: await bcrypt.hash(password, 12), adminId: req.session.admin.id}}); }
+  catch (e) { if (e.code === 'P2002') return res.status(400).render('add-nurse', {error: 'That email already belongs to a nurse.'}); throw e; }
+  res.redirect('/admin/nurses');
 });
-
-
-app.get("/admin/nurses", async (req,res)=> {
-  const nurses = await prisma.nurse.findMany();
-    res.render("nurses",{error: "", nurses})
-})
-
-app.get("/admin/add/nurse", (req,res) => {
-    res.render("add-nurse",{error: ""})
-})
-
-
-
-
-
-
-
-
-app.post("/admin/add/nurse",  async (req,res)=> {
-    const {name,email,password,confirmPassword,phoneNumber} = req.body;
- 
-    if(password !== confirmPassword){
-        return res.render("add-nurse", {error: "Passwords do not match"})
-    }
-    try {
-        await prisma.nurse.create({
-            data: {
-                name,
-                email,
-                password,
-                phone: phoneNumber,
-                admin: {
-                    connect: { id: 1 }
-                }
-            }
-        })
-        res.redirect("/admin/nurses")
-    } catch (error) {
-        res.render("add-nurse", {error})
-    }
-   
-})
-
-
-
-app.get("/admin/analytics", async (req,res) => {
-
-const mostCommonSicknesses = await prisma.sickness.findMany({
-  include: {
-    _count: {
-      select: {
-        complaints: true
-      }
-    }
-  },
-  orderBy: {
-    complaints: {
-      _count: 'desc'
-    }
-  },
-  take: 5
-})
-
-console.log(mostCommonSicknesses)
-// const sicknessStats = await prisma.sickness.findMany({
-//   include: {
-//     complaints: {
-//       where: {
-//         createdAt: {
-//           gte: new Date("2025-12-01"),
-//           lt:  new Date("2026-01-01")
-//         }
-//       }
-//     },
-//     _count: {
-//       select: { complaints: true }
-//     }
-//   }
-// });
-
-  res.render("analytics",{mostCommonSicknesses})
-})
-
-app.get("/admin/record-books", async (req,res) => {
-
-  const recordBooks = await prisma.recordTemplate.findMany({
-    orderBy: {createdAt: 'desc'},
-    take: 10
-  }
-  );
-
-  res.render("record-books",{error: "", recordBooks})
-})
-
-app.get("/admin/shifts", async (req,res) => {
-  try {
-
-    const shifts = await prisma.shift.findMany({})
-    res.render("shifts",{shifts, error: ""})
-  } catch(err) {
-    res.render("shifts",{shifts: [], error: err.message})
-  }
-})
-
-
-app.get("/student/records", async (req,res) => {
-const students = await prisma.student.findMany();
-
-  res.render('student_records', {students, error:""});
-})
-
-app.get("/add/student" , (req,res) => {
-  res.render("add_student",{error:""})
-})
-
-app.post("/add/student", async (req,res) => {
-  try {
-    const {name,height,weight} = req.body;
-   const sClass = req.body.class;
-   const sAge  = Number.parseInt(req.body.age)
-   await prisma.student.create({
-    data: {
-      name,
-      height: Number.parseFloat(height),
-      weight: Number.parseFloat(weight),
-      age: sAge,
-      class: sClass
-    }
-   })
-    res.redirect("/student/records")
-  } catch(err) {
-res.render("add_student",{error: err.message})
-  }
-  
-})
-
-app.get("/student/view/:id", async (req,res) => {
-
-
-
-  const studentId = parseInt(req.params.id);
-  const student = await prisma.student.findUnique({
-    where: { id: studentId }
-  })
-
-  const complaints = await prisma.complaint.findMany({
-    where : {studentId: studentId},
-    include: {
-      sicknesses: true
-    },
-    orderBy: {started: 'desc'}
-  })
-
-   console.log(complaints)
-
-  res.render("view_student",{student,nurseId: req.session.nurse ? req.session.nurse.id : null, complaints})
-
-})
-
-
-app.post('/student/add/complaint/:id',async (req,res) => {
-  const studentId = Number(req.body.studentId);
-  // const nurse = req.session.nurse
-  const nurseId = Number(req.body.nurseId);
-  const student = await prisma.student.findFirst({
-    where: {id: Number(studentId)}
-  })
-
-
-  const nurse = await prisma.nurse.findFirst({
-    where: {id: Number(nurseId)}
-  })
-  const {complaintIdent,complaintNotes,medication,tags} = req.body
-  const frequency = Number(req.body.frequency);
-  const duration = Number(req.body.duration);
-  
-   
-   
-   
-
-  const severity  = req.body.severity
-  console.log(nurseId, studentId, tags, medication, complaintNotes, severity, frequency, duration)
-
-   let sicknesses = [];
-   
-    sicknesses = JSON.parse(tags);
-  console.log(sicknesses)
-  await prisma.complaint.create({
-    data : {
-        complaintIdent,
-        complaintNotes,
-        medication,
-        severity,
-        studentName: student.name,
-        nurseName: nurse.name,
-        sicknesses: {
-            connectOrCreate : sicknesses.map((name) => ({
-              where:{name},
-              create: {name}
-            }))
-      
-        },
-        frequency,
-        duration,
-        student: {connect: {id: studentId} },
-        nurse: {connect: {id: nurseId} },
-        started: new Date(),
-        ended: null
-
-    }
-  })
-  const complaint = await prisma.complaint.findFirst({
-    where: { studentId: studentId },
-    orderBy: { started: 'desc' }
-  })
-  await prisma.student.update({
-    where : {id :studentId},
-    data : {
-      complaints: {connect: {id: complaint.id}}
-    }
-  })
-  res.redirect(`/student/view/${studentId}`);
-
-})
-
-app.get("/student/complaints", async (req, res) => {
-  try {
-    const complaints = await prisma.complaint.findMany({
-        orderBy: {started: 'desc'},
-        take:20
-      })
-      res.render('complaints', {complaints, error: ""});
-  } catch(err) {
-    return res.render('complaints', {error: err.message});
-  }
-
+app.get('/admin/shifts', async (req,res) => {
+  const status = ['active','pending','validated'].includes(req.query.status) ? req.query.status : 'all';
+  const where = {nurse: {adminId: req.session.admin.id}};
+  if (status === 'active') where.endTime = null;
+  if (status === 'pending') {where.endTime = {not: null}; where.validatedAt = null;}
+  if (status === 'validated') where.validatedAt = {not: null};
+  res.render('shift-log', {status, shifts: await prisma.shift.findMany({where, include: {nurse: true}, orderBy: {startTime: 'desc'}})});
 });
-
-app.get("/health-tracking",(req,res)=>{
-  res.render("health-tracking",{})
-})
-app.get('/appointments',(req,res) => {
-   res.render("appointments")
-})
-app.get('/medications',(req,res) => {
-   res.render("medications")
-})
-
-
-app.get('/records',(req,res) => {
-   res.render("records")
-})
-
-
-app.post("/auth/logout/nurse", async (req,res) => {
+app.get('/nurse/shifts', async (req,res) => {
+  if (!req.session.nurse) return res.redirect('/admin/shifts');
+  const status = ['active','pending','validated'].includes(req.query.status) ? req.query.status : 'all';
+  const where = {nurseId: req.session.nurse.id};
+  if (status === 'active') where.endTime = null;
+  if (status === 'pending') { where.endTime = {not: null}; where.validatedAt = null; }
+  if (status === 'validated') where.validatedAt = {not: null};
+  const activeShift = await prisma.shift.findFirst({where: {nurseId: req.session.nurse.id, endTime: null}});
+  res.render('shift-log', {status, activeShift, shifts: await prisma.shift.findMany({where, include: {nurse: true}, orderBy: {startTime: 'desc'}})});
+});
+app.post('/nurse/shifts/:action', async (req,res) => {
+  if (!req.session.nurse) return res.sendStatus(403);
+  const nurseId = req.session.nurse.id;
+  if (req.params.action === 'clock-out') {
+    await prisma.shift.updateMany({where: {nurseId, endTime: null}, data: {endTime: new Date()}});
+  } else if (req.params.action === 'clock-in') {
     try {
-        const name = req.session.nurse.name
-        const user = await prisma.nurse.findFirst({where: req.body.userId ? {id: parseInt(req.body.userId)} : {name} })
-        const shift = await prisma.shift.findFirst({
-            where: {
-                nurseId: user.id,
-                endTime: null
-            },
-            orderBy: {startTime: 'desc'}
-        })
-        if (shift) {
-            await prisma.shift.update({
-                where: {id: shift.id},
-                data: {endTime: new Date()}
-            })
-        }
-   req.session.destroy((err) => {
-    if (err) return res.status(500).send("Could not destroy session");
-    res.clearCookie('connect.sid');
-    res.redirect('/');
-   })
-        // res.redirect("/");
-    } catch(err) {
-        const name = req.session.nurse.name
-        const user = await prisma.nurse.findFirst({where: req.body.userId ? {id: parseInt(req.body.userId)} : {name} })
-        res.status(500).render("nurse-dashboard",{user, error: err.message})
-    }
-})
-
-app.get("/student/view/complaint/:id", async (req,res) => {
-if (req.session.nurse || req.session.admin) {
-  const complaintId = parseInt(req.params.id);
-  const complaint = await prisma.complaint.findUnique({
-    where: {id: complaintId}
-  })
-
-  res.render("view_complaints",{complaint})
-} else {
-  res.redirect("/auth/login/nurse")
-}
-})
-
-
-
+      await prisma.$transaction(async tx => {
+        if (!await tx.shift.findFirst({where: {nurseId, endTime: null}}))
+          await tx.shift.create({data: {nurseId, nurseName: req.session.nurse.name, startTime: new Date()}});
+      });
+    } catch (error) { if (error.code !== 'P2002') throw error; }
+  } else return res.sendStatus(400);
+  res.redirect('/nurse/shifts');
+});
+app.post('/admin/shifts/:id/:action', async (req,res) => {
+  const shift = await prisma.shift.findFirst({where: {id: id(req.params.id), nurse: {adminId: req.session.admin.id}}});
+  if (!shift) return missing();
+  if (req.params.action === 'close' && !shift.endTime) await prisma.shift.updateMany({where: {id: shift.id, endTime: null}, data: {endTime: new Date()}});
+  else if (req.params.action === 'validate' && shift.endTime) await prisma.shift.updateMany({where: {id: shift.id, validatedAt: null}, data: {validatedAt: new Date(), validatedBy: req.session.admin.id}});
+  else return res.status(400).render('message', {title: 'Shift cannot be updated', message: 'Only completed shifts can be validated. Refresh to see its latest status.'});
+  res.redirect('/admin/shifts');
+});
+app.post(['/auth/logout/nurse','/auth/logout','/logout'], async (req,res) => {
+  if (req.session.nurse) await prisma.shift.updateMany({where: {nurseId: req.session.nurse.id, endTime: null}, data: {endTime: new Date()}});
+  await new Promise((resolve,reject) => req.session.destroy(err => err ? reject(err) : resolve()));
+  res.clearCookie('connect.sid'); res.redirect('/');
+});
+app.get('/student/records', async (req,res) => {
+  const q = String(req.query.q || '').trim();
+  const students = await prisma.student.findMany({where: q ? {OR: [{name: {contains: q}}, {class: {contains: q}}]} : {}, include: {_count: {select: {complaints: true}}}, orderBy: {name: 'asc'}});
+  res.render('students', {students, q});
+});
+app.get('/add/student', (req,res) => res.render('student-form', {student: {}, editing: false}));
+app.get('/student/edit/:id', async (req,res) => {
+  const student = await prisma.student.findUnique({where: {id: id(req.params.id)}}); if (!student) return missing();
+  res.render('student-form', {student, editing: true});
+});
+app.post(['/add/student','/student/edit/:id'], async (req,res) => {
+  const editing = !!req.params.id; let data;
+  try { data = studentData(req.body); } catch(e) { return res.status(400).render('student-form', {student: {...req.body, id: req.params.id}, editing, error: e.message}); }
+  const student = editing ? await prisma.student.update({where: {id: id(req.params.id)}, data}) : await prisma.student.create({data});
+  res.redirect(`/student/view/${student.id}`);
+});
+app.get('/student/view/:id', async (req,res) => {
+  const student = await prisma.student.findUnique({where: {id: id(req.params.id)}, include: {complaints: {include: {sicknesses: true, nurse: true}, orderBy: {started: 'desc'}}}});
+  if (!student) return missing(); res.render('student-detail', {student});
+});
+app.post('/student/add/complaint/:id', async (req,res) => {
+  if (!req.session.nurse) return res.status(403).render('message', {title: 'Nurse access required', message: 'Sign in as a nurse to record a health visit.'});
+  const student = await prisma.student.findUnique({where: {id: id(req.params.id)}}); if (!student) return missing();
+  const active = await prisma.shift.findFirst({where: {nurseId: req.session.nurse.id, endTime: null}});
+  if (!active) return res.status(400).render('message', {title: 'Your shift has ended', message: 'Open My shifts and clock in before recording a visit.'});
+  const {complaintIdent, complaintNotes, medication, severity} = req.body;
+  const frequency = Number(req.body.frequency), duration = Number(req.body.duration);
+  let tags;
+  try { tags = req.body.tags?.startsWith('[') ? JSON.parse(req.body.tags) : String(req.body.tags || '').split(','); if (!Array.isArray(tags) || tags.some(t => typeof t !== 'string')) throw Error(); }
+  catch { return res.status(400).render('message', {title: 'Invalid sickness list', message: 'Use comma-separated sickness names.'}); }
+  if (!complaintIdent?.trim() || !complaintNotes?.trim() || !['mild','normal','severe'].includes(severity) || !Number.isInteger(frequency) || frequency < 1 || !Number.isInteger(duration) || duration < 0) return res.status(400).render('message', {title: 'Check the visit details', message: 'Add a complaint, notes, severity, positive daily frequency, and a non-negative duration.'});
+  tags = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))];
+  await prisma.complaint.create({data: {studentId: student.id, nurseId: req.session.nurse.id, studentName: student.name, nurseName: req.session.nurse.name, complaintIdent: complaintIdent.trim(), complaintNotes: complaintNotes.trim(), medication: medication?.trim() || 'None', severity, frequency, duration, sicknesses: {connectOrCreate: tags.map(name => ({where: {name}, create: {name}}))}}});
+  res.redirect(`/student/view/${student.id}`);
+});
+app.post('/student/complaint/:id/resolve', async (req,res) => {
+  if (!req.session.nurse) return res.sendStatus(403);
+  const complaint = await prisma.complaint.findUnique({where: {id: id(req.params.id)}}); if (!complaint) return missing();
+  await prisma.complaint.updateMany({where: {id: complaint.id, ended: null}, data: {ended: new Date()}});
+  res.redirect(`/student/view/${complaint.studentId}`);
+});
+app.get('/student/complaints', async (req,res) => res.render('visits', {complaints: await prisma.complaint.findMany({include: {student: true}, orderBy: {started: 'desc'}})}));
+app.get('/student/view/complaint/:id', async (req,res) => {
+  const complaint = await prisma.complaint.findUnique({where: {id: id(req.params.id)}}); if (!complaint) return missing(); res.redirect(`/student/view/${complaint.studentId}#visit-${complaint.id}`);
+});
+app.get('/admin/record-books', async (req,res) => res.render('record-books', {recordBooks: await prisma.recordTemplate.findMany({orderBy: {createdAt: 'desc'}})}));
+app.get('/admin/record-books/:id', async (req,res) => {
+  const book = await prisma.recordTemplate.findUnique({where: {id: id(req.params.id)}, include: {fields: {orderBy: {order: 'asc'}}, rows: {include: {values: true}, orderBy: {createdAt: 'desc'}}}});
+  if (!book) return missing();
+  res.render('record-book-detail', {book});
+});
 app.post('/admin/create/record-books', async (req,res) => {
-  
-    const {tableName, columns} = req.body;
-
-     if (!tableName || !columns.length) {
-    return res.status(400).render("record-books",{error: "Invalid input"});
-  }
-    const template  = await prisma.recordTemplate.create({
-        data: {
-            name: tableName
-        }
-    })
-  for (const col of columns) {
-          await prisma.fieldDefinition.create({
-            data : {
-              templateId: template.id,
-              name: col.name,
-              type: col.type,
-              required: col.required,
-              order: col.order
-            }
-          })
-  }
-
- 
-      // return res.status(500).render("record-books",{error: err.message})
-      res.redirect("/admin/record-books")
-    
-})
-
-
- app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
-    })
+  const {tableName,columns} = req.body;
+  if (!tableName?.trim() || !Array.isArray(columns) || !columns.length || columns.some(c => !c.name?.trim() || !['STRING','NUMBER','DATE','BOOLEAN'].includes(c.type)) || new Set(columns.map(c => c.name.trim().toLowerCase())).size !== columns.length) return res.status(400).json({error: 'Enter a title and unique, valid columns.'});
+  await prisma.recordTemplate.create({data: {name: tableName.trim(), fields: {create: columns.map((c,i) => ({name: c.name.trim(), type: c.type, required: !!c.required, order: i + 1}))}}});
+  res.redirect('/admin/record-books');
+});
+app.get('/complaints', (req,res) => res.redirect('/student/complaints'));
+app.get('/records', (req,res) => res.redirect('/student/records'));
+app.get(['/appointments','/medications'], (req,res) => res.render(req.path.slice(1)));
+app.use((req,res) => res.status(404).render('message', {title: 'Page not found', message: 'Use the navigation to return to your workspace.'}));
+app.use((err,req,res,next) => {
+  console.error(err);
+  const status = err.status || (err.code === 'P2025' ? 404 : 500);
+  res.status(status).render('message', {title: status === 404 ? 'Record not found' : 'Unable to complete request', message: status < 500 ? err.message : 'Please try again. If the problem continues, contact your administrator.'});
+});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) app.listen(Number(process.env.PORT) || 3000, () => console.log('Thryve is running.'));

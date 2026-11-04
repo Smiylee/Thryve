@@ -14,16 +14,16 @@
 
 
 <h1>Record Books</h1>
-<input type="text" placeholder="Search Record Books" style="padding: 8px; width: 300px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px;">
-<button>Create New Records</button>
+
+<p class="muted">Create a record book by defining its columns below.</p>
  <% recordBooks.forEach(recordBook => { %>
     <div style="display: flex;flex-direction: row; gap: 5px;margin: 10px;">
         <h3><%= recordBook.name %></h3>
-        <button>View Record Book</button>
+        <a href="/admin/record-books/<%= recordBook.id %>">View record book →</a>
     </div>
     <% }) %>
 
-<!-- <form class="record" id="tableForm" style="display: flex; flex-direction: column; gap: 10px;">
+<form class="record" id="tableForm" style="display: flex; flex-direction: column; gap: 10px;">
     <input type="text" name="tableName" placeholder="Enter Record Book Name" required>
    <label for="columns">Define Columns</label>
 
@@ -31,7 +31,7 @@
    <button id="addColumnBtn" type="button">Add column +</button>
     <button type="submit">Create Record Book</button>
    
-</form> -->
+</form>
 
 <div><%= error %></div>
 

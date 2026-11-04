@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon app.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/*.test.js",
     "prisma:migrate": "npx prisma migrate dev --name init",
     "postinstall": "npx prisma generate",
     "prisma:studio": "npx prisma studio",
-    "prisma:push": "npx prisma db push"
+    "prisma:push": "npx prisma db push",
+    "start": "node app.js",
+    "test:unit": "node --test tests/health.test.js",
+    "db:setup": "node scripts/setup-db.js",
+    "demo:seed": "node scripts/demo-data.js",
+    "demo:clear": "node scripts/demo-data.js --clear"
   },
   "keywords": [],
   "author": "",
