@@ -1,1 +1,48 @@
-<%- include('layout', {body: include('record-books_')})  %>
+<%- include('partials/workspace-start', {title: 'Record books'}) %>
+<header class="page-head record-books-head"><div><div class="eyebrow">Custom records</div><h1>Record books</h1><p class="subtitle">Create structured books, add fields, and record entries.</p></div></header>
+
+<section class="record-book-list" aria-label="Record books">
+  <% if (recordBooks.length) { recordBooks.forEach(book => { %>
+    <article class="card record-book-card">
+      <div><h2><%= book.name %></h2><p class="muted"><%= book._count.fields %> <%= book._count.fields === 1 ? 'column' : 'columns' %> · <%= book._count.rows %> <%= book._count.rows === 1 ? 'entry' : 'entries' %></p></div>
+      <a class="button secondary" href="/admin/record-books/<%= book.id %>">Open record book <span aria-hidden="true">→</span></a>
+    </article>
+  <% }) } else { %><div class="card empty">No record books yet. Create one below to get started.</div><% } %>
+</section>
+
+<section class="card record-book-create">
+  <div class="section-heading"><div><h2>Create a record book</h2><p class="muted">Give the book a name, then add the columns it needs.</p></div></div>
+  <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+  <form id="create-book-form" method="post" action="/admin/create/record-books">
+    <label for="tableName">Record book name</label><input id="tableName" name="tableName" maxlength="100" placeholder="e.g. Equipment log" required>
+    <fieldset class="record-fields"><legend>Columns</legend><div id="columns-container" class="column-list"></div><button class="secondary" id="add-column" type="button">＋ Add column</button></fieldset>
+    <button type="submit">Create record book</button>
+  </form>
+</section>
+
+<style>
+.record-books-head{margin-bottom:22px}.record-book-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px;margin-bottom:30px}.record-book-card{margin:0;display:flex;align-items:center;justify-content:space-between;gap:18px}.record-book-card h2{margin:0 0 4px;font-size:20px}.record-book-card p{margin:0}.record-book-card .button{white-space:nowrap}.record-book-create{max-width:900px}.section-heading h2{margin:0 0 4px}.section-heading p{margin-bottom:20px}.record-book-create form>label{margin:0 0 7px}.record-book-create form>input{margin:0;max-width:560px}.record-fields{border:0;padding:0;margin:24px 0 20px}.record-fields legend{font-size:13px;font-weight:700;padding:0;margin-bottom:10px}.column-list{display:grid;gap:10px;margin-bottom:12px}.column-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(130px,.6fr) auto auto;align-items:end;gap:12px;padding:14px;background:#f7f8fa;border:1px solid var(--line);border-radius:12px}.column-row label{font-size:12px}.column-row input,.column-row select{margin-top:4px}.column-row .required-option{display:flex;align-items:center;gap:7px;padding-bottom:11px;white-space:nowrap}.column-row .required-option input{width:auto;margin:0}.column-row .remove-column{background:#fff;color:#8a3026;border:1px solid #e6c7c3;padding:8px 11px}.record-book-create button[type=submit]{margin-top:3px}@media(max-width:650px){.record-book-card{align-items:flex-start;flex-direction:column}.column-row{grid-template-columns:1fr 1fr}.column-row .required-option{padding-bottom:9px}}
+</style>
+<script>
+(() => {
+  const container = document.getElementById('columns-container');
+  let nextColumn = 0;
+  function addColumn() {
+    const index = nextColumn++;
+    const row = document.createElement('div');
+    row.className = 'column-row';
+    row.innerHTML = `<label>Column name<input name="columns[${index}][name]" maxlength="80" placeholder="e.g. Item name" required></label><label>Type<select name="columns[${index}][type]"><option value="STRING">Text</option><option value="NUMBER">Number</option><option value="DATE">Date</option><option value="BOOLEAN">Yes / no</option></select></label><label class="required-option"><input type="checkbox" name="columns[${index}][required]" value="true"> Required</label><button class="remove-column" type="button" aria-label="Remove column">Remove</button>`;
+    row.querySelector('.remove-column').addEventListener('click', () => row.remove());
+    container.append(row);
+    row.querySelector('input[type="text"],input:not([type])').focus();
+  }
+  document.getElementById('add-column').addEventListener('click', addColumn);
+  document.getElementById('create-book-form').addEventListener('submit', event => {
+    const names = [...container.querySelectorAll('.column-row input:not([type="checkbox"])')].map(input => input.value.trim().toLocaleLowerCase());
+    if (!names.length) { event.preventDefault(); alert('Add at least one column to the record book.'); return; }
+    if (new Set(names).size !== names.length) { event.preventDefault(); alert('Column names must be unique.'); }
+  });
+  addColumn();
+})();
+</script>
+<%- include('partials/workspace-end') %>

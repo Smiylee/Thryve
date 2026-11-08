@@ -152,17 +152,53 @@ app.get('/student/complaints', async (req,res) => res.render('visits', {complain
 app.get('/student/view/complaint/:id', async (req,res) => {
   const complaint = await prisma.complaint.findUnique({where: {id: id(req.params.id)}}); if (!complaint) return missing(); res.redirect(`/student/view/${complaint.studentId}#visit-${complaint.id}`);
 });
-app.get('/admin/record-books', async (req,res) => res.render('record-books', {recordBooks: await prisma.recordTemplate.findMany({orderBy: {createdAt: 'desc'}})}));
-app.get('/admin/record-books/:id', async (req,res) => {
-  const book = await prisma.recordTemplate.findUnique({where: {id: id(req.params.id)}, include: {fields: {orderBy: {order: 'asc'}}, rows: {include: {values: true}, orderBy: {createdAt: 'desc'}}}});
+const recordTypes = new Set(['STRING','NUMBER','DATE','BOOLEAN']);
+const validColumns = columns => Array.isArray(columns) && columns.length > 0 && columns.length <= 50 && columns.every(column => column && typeof column.name === 'string' && column.name.trim() && column.name.trim().length <= 80 && recordTypes.has(column.type)) && new Set(columns.map(column => column.name.trim().toLocaleLowerCase())).size === columns.length;
+const recordBookData = {fields: {orderBy: {order: 'asc'}}, rows: {include: {values: true}, orderBy: {createdAt: 'desc'}}};
+async function getRecordBook(bookId) {
+  const book = await prisma.recordTemplate.findUnique({where: {id: bookId}, include: recordBookData});
   if (!book) return missing();
-  res.render('record-book-detail', {book});
-});
+  return book;
+}
+app.get('/admin/record-books', async (req,res) => res.render('record-books', {recordBooks: await prisma.recordTemplate.findMany({orderBy: {createdAt: 'desc'}, include: {_count: {select: {fields: true, rows: true}}}})}));
+app.get('/admin/record-books/:id', async (req,res) => res.render('record-book-detail', {book: await getRecordBook(id(req.params.id))}));
 app.post('/admin/create/record-books', async (req,res) => {
   const {tableName,columns} = req.body;
-  if (!tableName?.trim() || !Array.isArray(columns) || !columns.length || columns.some(c => !c.name?.trim() || !['STRING','NUMBER','DATE','BOOLEAN'].includes(c.type)) || new Set(columns.map(c => c.name.trim().toLowerCase())).size !== columns.length) return res.status(400).json({error: 'Enter a title and unique, valid columns.'});
-  await prisma.recordTemplate.create({data: {name: tableName.trim(), fields: {create: columns.map((c,i) => ({name: c.name.trim(), type: c.type, required: !!c.required, order: i + 1}))}}});
+  if (typeof tableName !== 'string' || !tableName.trim() || tableName.trim().length > 100 || !validColumns(columns)) {
+    const recordBooks = await prisma.recordTemplate.findMany({orderBy: {createdAt: 'desc'}, include: {_count: {select: {fields: true, rows: true}}}});
+    return res.status(400).render('record-books', {recordBooks, error: 'Enter a book name and at least one column with a unique name and valid type.'});
+  }
+  await prisma.recordTemplate.create({data: {name: tableName.trim(), fields: {create: columns.map((column,index) => ({name: column.name.trim(), type: column.type, required: column.required === 'true' || column.required === true, order: index + 1}))}}});
   res.redirect('/admin/record-books');
+});
+app.post('/admin/record-books/:id/columns', async (req,res) => {
+  const bookId = id(req.params.id);
+  const book = await getRecordBook(bookId);
+  const columns = req.body.columns;
+  const existingNames = new Set(book.fields.map(field => field.name.trim().toLocaleLowerCase()));
+  const valid = validColumns(columns) && columns.every(column => !existingNames.has(column.name.trim().toLocaleLowerCase()));
+  if (!valid) return res.status(400).render('record-book-detail', {book, error: 'Add one or more valid columns with names that are unique in this record book.'});
+  await prisma.fieldDefinition.createMany({data: columns.map((column,index) => ({templateId: bookId, name: column.name.trim(), type: column.type, required: column.required === 'true' || column.required === true, order: book.fields.length + index + 1}))});
+  res.redirect(`/admin/record-books/${bookId}`);
+});
+app.post('/admin/record-books/:id/entries', async (req,res) => {
+  const bookId = id(req.params.id);
+  const book = await getRecordBook(bookId);
+  const values = [];
+  let validationError = '';
+  for (const field of book.fields) {
+    const raw = req.body[`field_${field.id}`];
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (field.required && !value) { validationError = `“${field.name}” is required.`; break; }
+    if (!value) { values.push({columnId: field.id, value: ''}); continue; }
+    if (field.type === 'NUMBER' && !Number.isFinite(Number(value))) { validationError = `“${field.name}” must be a valid number.`; break; }
+    if (field.type === 'DATE' && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`)) || new Date(`${value}T00:00:00Z`).toISOString().slice(0,10) !== value)) { validationError = `“${field.name}” must be a valid date.`; break; }
+    if (field.type === 'BOOLEAN' && !['true','false'].includes(value)) { validationError = `Choose Yes or No for “${field.name}”.`; break; }
+    values.push({columnId: field.id, value});
+  }
+  if (validationError) return res.status(400).render('record-book-detail', {book, error: validationError});
+  await prisma.recordEntry.create({data: {templateId: bookId, values: {create: values}}});
+  res.redirect(`/admin/record-books/${bookId}`);
 });
 app.get('/complaints', (req,res) => res.redirect('/student/complaints'));
 app.get('/records', (req,res) => res.redirect('/student/records'));
