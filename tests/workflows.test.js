@@ -28,7 +28,7 @@ test('feature regression: authentication → shift → student record → analyt
     const admin = await prisma.admin.create({data: {username: 'matron', password: await bcrypt.hash('test-password', 4)}});
     const nurse = await prisma.nurse.create({data: {name: 'Test Nurse', email: 'nurse@example.test', password: 'legacy-password', adminId: admin.id}});
     const a = client(), n = client(), guest = client();
-    assert.match(await (await guest('/')).text(), /Better care starts/);
+    assert.match(await (await guest('/')).text(), /School health workspace/);
     assert.equal((await guest('/student/records')).status, 302);
     assert.equal((await a('/auth/login/admin', {username:'matron', password:'incorrect'})).status, 401);
     assert.equal((await a('/auth/login/admin', {username:'matron', password:'test-password'})).status, 302);
@@ -45,11 +45,42 @@ test('feature regression: authentication → shift → student record → analyt
     for (const route of ['/admin/dashboard','/admin/analytics','/admin/shifts','/student/records',`/student/view/${student.id}`,'/student/complaints','/admin/nurses','/admin/record-books']) {
       const r = await a(route); assert.equal(r.status, 200, `${route}: ${await r.text()}`);
     }
+    // Record books: creation, typed cells, atomic validation, edits and deletion.
+    const createBook = await a('/admin/create/record-books', {tableName:'Equipment', 'columns[0][name]':'Item', 'columns[0][type]':'STRING', 'columns[0][required]':'true', 'columns[1][name]':'Count', 'columns[1][type]':'NUMBER'});
+    assert.equal(createBook.status, 302);
+    const bookList = await a('/admin/record-books');
+    assert.equal(bookList.status, 200);
+    const bookListHtml = await bookList.text();
+    assert.match(bookListHtml, /Equipment/);
+    assert.match(bookListHtml, /2 columns · 0 entries/);
+    const book = await prisma.recordTemplate.findFirst({where:{name:'Equipment'}, include:{fields:{orderBy:{order:'asc'}}}});
+    const bookPath = `/admin/record-books/${book.id}`;
+    assert.equal((await a(bookPath)).status, 200);
+    assert.match(await (await a(bookPath)).text(), /record-grid/);
+    assert.equal((await a(`${bookPath}/entries`, {[`field_${book.fields[0].id}`]:'Bandages', [`field_${book.fields[1].id}`]:'12'})).status, 302);
+    const entry = await prisma.recordEntry.findFirst({where:{templateId:book.id}});
+    const fields = book.fields.map(f => ({id:f.id,name:f.name,type:f.type,required:f.required}));
+    const login = await fetch(url+'/auth/login/admin', {method:'POST',redirect:'manual',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'matron',password:'test-password'})});
+    const cookie = login.headers.get('set-cookie').split(';')[0];
+    const saveGrid = payload => fetch(url+bookPath+'/grid', {method:'POST', headers:{cookie,'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const payload = {name:'Supply log',columns:fields,rows:[{id:entry.id,[`field_${fields[0].id}`]:'Gauze',[`field_${fields[1].id}`]:'invalid'}]};
+    assert.equal((await saveGrid(payload)).status, 400);
+    assert.equal((await prisma.recordTemplate.findUnique({where:{id:book.id}})).name,'Equipment');
+    payload.rows[0][`field_${fields[1].id}`] = '24';
+    assert.equal((await saveGrid(payload)).status, 200);
+    assert.equal((await prisma.fieldValue.findFirst({where:{rowId:entry.id,columnId:fields[1].id}})).value,'24');
+    payload.rows.push({id:null,[`field_${fields[0].id}`]:'Tape',[`field_${fields[1].id}`]:'3'});
+    assert.equal((await saveGrid(payload)).status,200);
+    assert.equal(await prisma.recordEntry.count({where:{templateId:book.id}}),2);
+    assert.equal((await saveGrid({name:'Supply log',columns:[fields[0]],rows:[],deletedRows:[entry.id]})).status,200);
+    assert.equal(await prisma.fieldDefinition.count({where:{templateId:book.id}}),1);
+    assert.equal(await prisma.fieldValue.count({where:{rowId:entry.id}}),0);
+    assert.equal((await n(bookPath)).status,403);
     const report = await (await a('/admin/analytics')).text();
     assert.match(report, /fever/);
     assert.match(report, /Visits by class/);
     assert.match(report, /JSS2/);
-    assert.match(await (await a('/admin/dashboard')).text(), /1 open cases need follow-up/);
+    assert.match(await (await a('/admin/dashboard')).text(), /Open cases <span class="badge">1<\/span>/);
     assert.equal((await a('/')).headers.get('location'), '/dashboard');
     assert.match(await (await n('/nurse/shifts')).text(), /You are on shift/);
     assert.equal((await n('/nurse/shifts/clock-out', {})).status, 302);

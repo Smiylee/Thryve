@@ -1,5 +1,5 @@
 <%- include('partials/workspace-start', {title: 'Record books'}) %>
-<header class="page-head record-books-head"><div><div class="eyebrow">Custom records</div><h1>Record books</h1><p class="subtitle">Create structured books, add fields, and record entries.</p></div></header>
+<header class="page-head record-books-head"><div><div class="eyebrow">Custom records</div><h1>Record books</h1><p class="subtitle">Choose a book to open its record sheet.</p></div></header>
 
 <section class="record-book-list" aria-label="Record books">
   <% if (recordBooks.length) { recordBooks.forEach(book => { %>
@@ -21,6 +21,8 @@
 </section>
 
 <style>
+.record-book-create,.record-book-card{font-size:18px}.record-book-create label,.record-fields legend{font-size:16px!important}.record-book-create input,.record-book-create select,.record-book-create button,.record-book-card .button{font-size:18px;min-height:48px}.record-book-create .required-option input{min-height:22px;width:22px;height:22px}.record-book-create .column-row{border-radius:6px}
+
 .record-books-head{margin-bottom:22px}.record-book-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px;margin-bottom:30px}.record-book-card{margin:0;display:flex;align-items:center;justify-content:space-between;gap:18px}.record-book-card h2{margin:0 0 4px;font-size:20px}.record-book-card p{margin:0}.record-book-card .button{white-space:nowrap}.record-book-create{max-width:900px}.section-heading h2{margin:0 0 4px}.section-heading p{margin-bottom:20px}.record-book-create form>label{margin:0 0 7px}.record-book-create form>input{margin:0;max-width:560px}.record-fields{border:0;padding:0;margin:24px 0 20px}.record-fields legend{font-size:13px;font-weight:700;padding:0;margin-bottom:10px}.column-list{display:grid;gap:10px;margin-bottom:12px}.column-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(130px,.6fr) auto auto;align-items:end;gap:12px;padding:14px;background:#f7f8fa;border:1px solid var(--line);border-radius:12px}.column-row label{font-size:12px}.column-row input,.column-row select{margin-top:4px}.column-row .required-option{display:flex;align-items:center;gap:7px;padding-bottom:11px;white-space:nowrap}.column-row .required-option input{width:auto;margin:0}.column-row .remove-column{background:#fff;color:#8a3026;border:1px solid #e6c7c3;padding:8px 11px}.record-book-create button[type=submit]{margin-top:3px}@media(max-width:650px){.record-book-card{align-items:flex-start;flex-direction:column}.column-row{grid-template-columns:1fr 1fr}.column-row .required-option{padding-bottom:9px}}
 </style>
 <script>

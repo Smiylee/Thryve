@@ -35,6 +35,8 @@ There is no shared starter password. If you cannot sign in, ask your administrat
 
 **Review activity:** The overview shows recent visits and open cases. Choose **Analytics** to change the date range and see visit counts and trends. These reports summarize recorded visits; they are not diagnoses.
 
+**Record books:** Matrons can open **Record books**, create a book with text, number, date, or yes/no columns, then edit cells directly. Add or delete rows, rename or delete columns, and choose **Save changes**. You can paste a block of cells from a spreadsheet, search rows, or export CSV. Book settings, deletion controls, and CSV download are under **Sheet options**. Save grid edits before adding new columns.
+
 ## Installing or updating Thryve
 
 These steps are for the person who manages the computer. They require Node.js 20 or newer and npm. Open Terminal (Mac) or Command Prompt (Windows), go to the Thryve project folder, then run:
@@ -68,3 +70,7 @@ npm run demo:clear
 ## Checks for developers
 
 Run `npm test` to check the main sign-in, student, visit, shift, and reporting workflows. The tests use a temporary database and do not change the school's records.
+
+### Design guidance
+
+The primary user is a 90-year-old matron with limited confidence using technology. Use this as the guide for every design decision: familiar layouts, readable text, large controls, plain instructions, and few visible choices. Each record book should open as a simplified Excel-style sheet with numbered rows and directly editable cells. Keep Add a row and Save changes obvious; put occasional settings in clearly labeled expandable sections. “Miniature spreadsheet” means fewer features, while keeping text and controls comfortable to read and use.

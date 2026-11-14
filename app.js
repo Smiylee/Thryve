@@ -14,7 +14,7 @@ export const app = express();
 const SQLiteStore = SQLiteStoreFactory(session);
 app.set('view engine', 'ejs'); app.set('views', path.join(root, 'views'));
 app.use(express.static(path.join(root, 'public'), {index: false}));
-app.use(express.urlencoded({extended: true, limit: '100kb'})); app.use(express.json({limit: '100kb'}));
+app.use(express.urlencoded({extended: true, limit: '2mb', parameterLimit: 10000})); app.use(express.json({limit: '2mb'}));
 app.use(session({store: new SQLiteStore({db: 'sessions.sqlite', dir: process.env.SESSION_DIR || root}), secret: process.env.SESSION_SECRET || randomBytes(48).toString('hex'), resave: false, saveUninitialized: false, cookie: {httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 86400000}}));
 app.use((req,res,next) => {
   res.locals.isAdmin = !!req.session.admin;
@@ -152,6 +152,8 @@ app.get('/student/complaints', async (req,res) => res.render('visits', {complain
 app.get('/student/view/complaint/:id', async (req,res) => {
   const complaint = await prisma.complaint.findUnique({where: {id: id(req.params.id)}}); if (!complaint) return missing(); res.redirect(`/student/view/${complaint.studentId}#visit-${complaint.id}`);
 });
+// URL-encoded arrays with more than 20 indices are parsed as objects.
+const normalizeColumns = value => Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [];
 const recordTypes = new Set(['STRING','NUMBER','DATE','BOOLEAN']);
 const validColumns = columns => Array.isArray(columns) && columns.length > 0 && columns.length <= 50 && columns.every(column => column && typeof column.name === 'string' && column.name.trim() && column.name.trim().length <= 80 && recordTypes.has(column.type)) && new Set(columns.map(column => column.name.trim().toLocaleLowerCase())).size === columns.length;
 const recordBookData = {fields: {orderBy: {order: 'asc'}}, rows: {include: {values: true}, orderBy: {createdAt: 'desc'}}};
@@ -163,42 +165,80 @@ async function getRecordBook(bookId) {
 app.get('/admin/record-books', async (req,res) => res.render('record-books', {recordBooks: await prisma.recordTemplate.findMany({orderBy: {createdAt: 'desc'}, include: {_count: {select: {fields: true, rows: true}}}})}));
 app.get('/admin/record-books/:id', async (req,res) => res.render('record-book-detail', {book: await getRecordBook(id(req.params.id))}));
 app.post('/admin/create/record-books', async (req,res) => {
-  const {tableName,columns} = req.body;
+  const {tableName} = req.body;
+  const columns = normalizeColumns(req.body.columns);
   if (typeof tableName !== 'string' || !tableName.trim() || tableName.trim().length > 100 || !validColumns(columns)) {
     const recordBooks = await prisma.recordTemplate.findMany({orderBy: {createdAt: 'desc'}, include: {_count: {select: {fields: true, rows: true}}}});
     return res.status(400).render('record-books', {recordBooks, error: 'Enter a book name and at least one column with a unique name and valid type.'});
   }
-  await prisma.recordTemplate.create({data: {name: tableName.trim(), fields: {create: columns.map((column,index) => ({name: column.name.trim(), type: column.type, required: column.required === 'true' || column.required === true, order: index + 1}))}}});
-  res.redirect('/admin/record-books');
+  const book = await prisma.recordTemplate.create({data: {name: tableName.trim(), fields: {create: columns.map((column,index) => ({name: column.name.trim(), type: column.type, required: column.required === 'true' || column.required === true, order: index + 1}))}}});
+  res.redirect(`/admin/record-books/${book.id}`);
 });
 app.post('/admin/record-books/:id/columns', async (req,res) => {
   const bookId = id(req.params.id);
   const book = await getRecordBook(bookId);
-  const columns = req.body.columns;
+  const columns = normalizeColumns(req.body.columns);
   const existingNames = new Set(book.fields.map(field => field.name.trim().toLocaleLowerCase()));
-  const valid = validColumns(columns) && columns.every(column => !existingNames.has(column.name.trim().toLocaleLowerCase()));
+  const valid = book.fields.length + columns.length <= 50 && validColumns(columns) && columns.every(column => !existingNames.has(column.name.trim().toLocaleLowerCase()));
   if (!valid) return res.status(400).render('record-book-detail', {book, error: 'Add one or more valid columns with names that are unique in this record book.'});
   await prisma.fieldDefinition.createMany({data: columns.map((column,index) => ({templateId: bookId, name: column.name.trim(), type: column.type, required: column.required === 'true' || column.required === true, order: book.fields.length + index + 1}))});
   res.redirect(`/admin/record-books/${bookId}`);
 });
+function recordValues(fields, input) {
+  return fields.map(field => {
+    const raw = input[`field_${field.id}`];
+    if (raw !== undefined && typeof raw !== 'string') throw new Error(`“${field.name}” must be a single value.`);
+    const value = (raw || '').trim();
+    if (value.length > 10000) throw new Error(`“${field.name}” is too long.`);
+    if (field.required && !value) throw new Error(`“${field.name}” is required.`);
+    if (value && field.type === 'NUMBER' && !Number.isFinite(Number(value))) throw new Error(`“${field.name}” must be a valid number.`);
+    if (value && field.type === 'DATE' && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`)) || new Date(`${value}T00:00:00Z`).toISOString().slice(0,10) !== value)) throw new Error(`“${field.name}” must be a valid date.`);
+    if (value && field.type === 'BOOLEAN' && !['true','false'].includes(value)) throw new Error(`Choose Yes or No for “${field.name}”.`);
+    return {columnId: field.id, value};
+  });
+}
 app.post('/admin/record-books/:id/entries', async (req,res) => {
-  const bookId = id(req.params.id);
-  const book = await getRecordBook(bookId);
-  const values = [];
-  let validationError = '';
-  for (const field of book.fields) {
-    const raw = req.body[`field_${field.id}`];
-    const value = typeof raw === 'string' ? raw.trim() : '';
-    if (field.required && !value) { validationError = `“${field.name}” is required.`; break; }
-    if (!value) { values.push({columnId: field.id, value: ''}); continue; }
-    if (field.type === 'NUMBER' && !Number.isFinite(Number(value))) { validationError = `“${field.name}” must be a valid number.`; break; }
-    if (field.type === 'DATE' && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`)) || new Date(`${value}T00:00:00Z`).toISOString().slice(0,10) !== value)) { validationError = `“${field.name}” must be a valid date.`; break; }
-    if (field.type === 'BOOLEAN' && !['true','false'].includes(value)) { validationError = `Choose Yes or No for “${field.name}”.`; break; }
-    values.push({columnId: field.id, value});
-  }
-  if (validationError) return res.status(400).render('record-book-detail', {book, error: validationError});
-  await prisma.recordEntry.create({data: {templateId: bookId, values: {create: values}}});
-  res.redirect(`/admin/record-books/${bookId}`);
+  const book = await getRecordBook(id(req.params.id));
+  let values;
+  try { values = recordValues(book.fields, req.body); }
+  catch (e) { return res.status(400).render('record-book-detail', {book, error: e.message}); }
+  await prisma.recordEntry.create({data: {templateId: book.id, values: {create: values}}});
+  res.redirect(`/admin/record-books/${book.id}`);
+});
+// Save the grid atomically: validation failures never partially overwrite a book.
+app.post('/admin/record-books/:id/grid', async (req,res) => {
+  const book = await getRecordBook(id(req.params.id));
+  const {rows, deletedRows = [], columns, name} = req.body;
+  let prepared;
+  try {
+    if (typeof name !== 'string' || !name.trim() || name.trim().length > 100) throw new Error('Enter a book name of up to 100 characters.');
+    if (!validColumns(columns) || columns.length > 50 || columns.some(c => !book.fields.some(f => f.id === c.id && f.type === c.type))) throw new Error('Keep at least one column, with unique names. Refresh before editing newly added columns.');
+    if (!Array.isArray(rows) || rows.length > 1000 || !Array.isArray(deletedRows)) throw new Error('Save up to 1,000 rows at a time.');
+    const existing = new Set(book.rows.map(r => r.id));
+    if (deletedRows.some(r => !existing.has(r)) || new Set(deletedRows).size !== deletedRows.length || new Set(columns.map(c => c.id)).size !== columns.length) throw new Error('Invalid row or column selection.');
+    const seen = new Set();
+    prepared = rows.map((row, index) => {
+      if (!row || typeof row !== 'object' || (row.id != null && (!existing.has(row.id) || seen.has(row.id) || deletedRows.includes(row.id)))) throw new Error('Invalid or duplicate row.');
+      if (row.id != null) seen.add(row.id);
+      try { return {id: row.id, values: recordValues(columns, row)}; }
+      catch (e) { throw new Error(`Row ${index + 1}: ${e.message}`); }
+    });
+  } catch (e) { return res.status(400).json({error: e.message}); }
+  await prisma.$transaction(async tx => {
+    await tx.recordTemplate.update({where: {id: book.id}, data: {name: name.trim()}});
+    const removedColumns = book.fields.filter(f => !columns.some(c => c.id === f.id)).map(f => f.id);
+    await tx.fieldValue.deleteMany({where: {OR: [{rowId: {in: deletedRows}}, {columnId: {in: removedColumns}}]}});
+    await tx.recordEntry.deleteMany({where: {templateId: book.id, id: {in: deletedRows}}});
+    await tx.fieldDefinition.deleteMany({where: {templateId: book.id, id: {in: removedColumns}}});
+    for (const [index, column] of columns.entries()) await tx.fieldDefinition.update({where: {id: column.id}, data: {name: column.name.trim(), required: column.required === true, order: index + 1}});
+    for (const row of prepared) {
+      if (row.id != null) {
+        await tx.fieldValue.deleteMany({where: {rowId: row.id}});
+        await tx.recordEntry.update({where: {id: row.id}, data: {values: {create: row.values}}});
+      } else await tx.recordEntry.create({data: {templateId: book.id, values: {create: row.values}}});
+    }
+  }, {timeout: 30000});
+  res.json({saved: true});
 });
 app.get('/complaints', (req,res) => res.redirect('/student/complaints'));
 app.get('/records', (req,res) => res.redirect('/student/records'));
@@ -207,6 +247,7 @@ app.use((req,res) => res.status(404).render('message', {title: 'Page not found',
 app.use((err,req,res,next) => {
   console.error(err);
   const status = err.status || (err.code === 'P2025' ? 404 : 500);
+  if (req.path.endsWith('/grid')) return res.status(status).json({error: status < 500 ? err.message : 'The book could not be saved. Your changes are still on screen. Try again.'});
   res.status(status).render('message', {title: status === 404 ? 'Record not found' : 'Unable to complete request', message: status < 500 ? err.message : 'Please try again. If the problem continues, contact your administrator.'});
 });
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) app.listen(Number(process.env.PORT) || 3000, () => console.log('Thryve is running.'));
